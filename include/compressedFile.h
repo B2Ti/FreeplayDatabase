@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <defines.h>
+#include <zlib.h>
 
 /**
  * @return
@@ -26,7 +27,7 @@ int dumpBufferToFileDefault(CompressedFile *file);
 int dumpBufferToFile(CompressedFile *file, const int compressionLevel);
 int readBufferFromFile(CompressedFile *file);
 int writeToBuffer56(CompressedFile *file, uint64_t data, const uint32_t nbits);
-int writeToBuffer(CompressedFile *file, Byte *data, const uint32_t nbits);
+int writeToBuffer(CompressedFile *file, const Byte *data, const uint32_t nbits);
 /**
  * @param data pointer to the int to fill with the data
  */

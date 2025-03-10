@@ -47,15 +47,6 @@ int createCompressedFile(CompressedFile *file, const char *filename, const char 
     return 0;
 }
 
-void closeFile(CompressedFile *file){
-    if (file){
-        if (file->file){
-            fclose(file->file);
-            file->file = NULL;
-        }
-    }
-}
-
 int setCompressedFilename(CompressedFile *file, const char *filename, const char *mode){
     if (file->file){
         fclose(file->file);
@@ -180,7 +171,7 @@ int dumpBufferToFile(CompressedFile *file, int compressionLevel){
     }
     size_t currentNumBytes = (file->index + 7) / 8;
     size_t numBytesOut = currentNumBytes + (currentNumBytes / 2) + 12;
-    unsigned char *compressedData = malloc(numBytesOut);
+    Byte *compressedData = malloc(numBytesOut);
     size_t compressedLen;
     FILE *fptr = file->file;
 
@@ -254,6 +245,7 @@ int readBufferFromFile(CompressedFile *file){
         inflateEnd(&stream);
         return MISC_FAIL;
     }
+    file->index = 0;
 
     return 0;
 }
@@ -307,50 +299,51 @@ int writeToBuffer56(CompressedFile *file, uint64_t data, const uint32_t nbits){
     return 0;
 }
 
+void _writeToBufferNoShift(CompressedFile *file, const Byte *data, const uint32_t nbits){
+    Byte top_mask = (1 << (nbits % 8)) - 1;
+    for (size_t index = 0; index < nbits / 8; index++){
+        file->buffer[(file->index / 8) + index] = data[index];
+    }
+    Byte currentData = data[nbits / 8];
+    file->buffer[(file->index / 8) + (nbits / 8)] = currentData & top_mask;
+    file->index += nbits;
+}
+
 /**
  * @param data a reference to the data to be written to the file, ** this function is destructive to the data **
  */
-int writeToBuffer(CompressedFile *file, Byte *data, const uint32_t nbits){
+int writeToBuffer(CompressedFile *file, const Byte *data, const uint32_t nbits){
     if ((nbits + file->index) >= (file->buffersize * 8)){
         fprintf(stderr, "out of space to write to buffer");
         return MISC_FAIL;
     }
-    uint32_t nbytes, i, index;
-    int64_t rem_bits = nbits + (file->index % 8);
-    unsigned char mask = 0;
-    if (rem_bits > 0){
-        mask = (2 << (rem_bits - 1)) - 1;
+    if (file->index % 8 == 0){
+        _writeToBufferNoShift(file, data, nbits);
+        return 0;
     }
-    if (rem_bits > 8){
-        mask = 0xff;
+    Byte rem_bits = nbits;
+    Byte up = file->index % 8;
+    Byte down = 8 - up;
+    Byte mask = 0xff;
+    if (rem_bits < 8){
+        mask = (1 << rem_bits) - 1;
     }
-    rem_bits -= 8;
-    unsigned char extra;
-    nbytes = (nbits + 7) / 8;
+    uint16_t current_data = data[0] & mask;
+    current_data <<= up;
+    rem_bits -= down;
     //shift the data up so the first bit aligns with the first bit of the file buffer
-    extra = shiftBuffer(data, nbytes, file->index % 8);
-    index = file->index / 8;
-    file->buffer[index] += data[0] & mask;
-    for (i = 1; i < nbytes; i++){
-        mask = 0;
-        if (rem_bits > 0){
-            mask = (2 << (rem_bits - 1)) - 1;
+    file->buffer[file->index / 8] += current_data & 0xff;
+    file->buffer[file->index / 8 + 1] += (current_data & 0xff00) >> 8;
+    for (uint32_t index = 1; index <= nbits / 8; index++){
+        if (rem_bits < 8){
+            mask = (1 << rem_bits) - 1;
         }
-        if (rem_bits > 8){
-            mask = 0xff;
-        }
+        current_data = data[index] & mask;
+        current_data <<= up;
+        file->buffer[(file->index / 8) + index] += current_data & 0xff;
+        file->buffer[(file->index / 8) + index + 1] += (current_data & 0xff00) >> 8; 
         rem_bits -= 8;
-        file->buffer[index + i] += data[i] & mask;
     }
-    mask = 0;
-    if (rem_bits > 0){
-        mask = (2 << (rem_bits - 1)) - 1;
-    }
-    if (rem_bits > 8){
-        mask = 0xff;
-    }
-    rem_bits -= 8;
-    file->buffer[index + nbytes] += extra & mask;
     file->index += nbits;
     return 0;
 }
@@ -370,8 +363,9 @@ int readFromBufferedFile56(CompressedFile *file, uint64_t *data, const uint32_t 
     }
     const uint64_t downshift_required = file->index % 8;
     const uint64_t datamask = (1LLU << (uint64_t)nbits) - 1LLU;
-    for (size_t index = 0; index < (nbits + 7) / 8; index++){
-        *data += file->buffer[(file->index / 8) + index] << (index * 8);
+    for (size_t index = 0; index <= (nbits + (file->index % 8) + 7) / 8; index++){
+        const uint64_t byte = file->buffer[(file->index / 8) + index];
+        *data += byte << (index * 8LLU);
     }
     *data >>= downshift_required;
     *data &= datamask;
@@ -384,10 +378,11 @@ void _readFromBufferNoShift(CompressedFile *file, Byte *data, const uint32_t nbi
     for (size_t index = 0; index < nbits / 8; index++){
         data[index] = file->buffer[(file->index / 8) + index];
     }
-    data[(nbits + 7) / 8] = file->buffer[(file->index / 8) + ((nbits + 7) / 8)];
+    data[nbits / 8] = file->buffer[(file->index / 8) + ((nbits + 7) / 8)] & top_mask;
+    file->index += nbits;
 }
 
-int readFromBufferedFile(CompressedFile *file, Byte *data, uint32_t nbits){
+int readFromBufferedFile(CompressedFile *file, Byte *data, const uint32_t nbits){
     if ((nbits + file->index) >= (file->buffersize * 8)){
         fprintf(stderr, "out of space to read from buffer");
         return MISC_FAIL;
@@ -397,29 +392,26 @@ int readFromBufferedFile(CompressedFile *file, Byte *data, uint32_t nbits){
         return 0;
     }
     Byte rem_bits = nbits;
-    Byte up = file->index % 8;
-    Byte down = 8 - up;
+    Byte down = file->index % 8;
+    Byte up = 8 - down;
     Byte mask = 0xff;
     if (rem_bits < 8){
         mask = (1 << rem_bits) - 1;
     }
-    Byte current_data = file->buffer[file->index / 8] & mask;
-    data[0] = current_data >> up;
-    rem_bits -= down;
-    for (size_t index = 1; index < nbits / 8; index++){
-        if (rem_bits < 8){
-            mask = (1 << rem_bits) - 1;
-        }
-        current_data = file->buffer[file->index / 8 + index - 1] & mask;
-        data[index - 1] += current_data << down; 
-        rem_bits -= up;
+    uint16_t current_data = file->buffer[file->index / 8] & mask;
+    data[0] = current_data >> down;
+    rem_bits -= up;
+    for (size_t index = 1; index <= nbits / 8; index++){
         if (rem_bits < 8){
             mask = (1 << rem_bits) - 1;
         }
         current_data = file->buffer[file->index / 8 + index] & mask;
-        data[index] += current_data >> up;
-        rem_bits -= down;
+        current_data <<= up;
+        data[index - 1] += current_data & 0xff;
+        data[index] += (current_data & 0xff00) >> 8; 
+        rem_bits -= 8;
     }
+    file->index += nbits;
 
     return 0;
 }
