@@ -1,3 +1,14 @@
+# Editor files
+.mypy_cache/
+.vs/
+.vscode/
+
+# Created files
+database/
+*.profraw
+*.profdata
+*.bin
+
 # Object files
 *.o
 *.ko
