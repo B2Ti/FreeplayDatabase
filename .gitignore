@@ -25,6 +25,7 @@ database/
 *.pch
 
 # Libraries
+lib/
 *.lib
 *.a
 *.la
