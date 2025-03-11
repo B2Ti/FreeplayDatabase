@@ -1,9 +1,10 @@
+// zlib may be installed as zlib.lib or just zlib, which need -lzlib and -lz respectively
 // 1                ) clang src/*.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -DRUNNINGTEST=1 -fprofile-generate
 // 2                ) ./main-10.exe
 // 3 Powershell     ) rd -r  ./database
 // 3 Linux Terminal ) rm -r ./database
 // 4                ) llvm-profdata merge ./*.profraw -output="default.profdata"
-// 5                ) clang src/*.c -Iinclude -Llib -lz -O3 -o"main-10.exe" -march=native -mfma -mavx2 -fprofile-use
+// 5                ) clang src/*.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -fprofile-use
 // 6                ) ./main-10.exe
 
 #include <threading.h>

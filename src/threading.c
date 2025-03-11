@@ -47,8 +47,8 @@ int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *)
     return resultCode;
 }
 int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturnValue *returnValues){
-    int32_t i;
-    int32_t result;
+    int32_t i = 0;
+    int32_t result = 0;
     if (returnValues == NULL){
         for (i=0; i < numThreads; i++){
             result |= pthread_join(threads[i], NULL);
