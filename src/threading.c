@@ -41,29 +41,30 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
     }
     return CrossThreadingSuccess;
 }
-#elif defined __unix
-int CreateCrossThread(crossThread *thread, void *(func)(void *), void *args){
+#elif defined __unix || defined __APPLE__
+int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *), void *args){
     int resultCode = pthread_create(thread, NULL, func, args);
     return resultCode;
 }
-int JoinCrossThreads(int32_t numThreads, crossThread *theads, crossThreadReturnValue **returnValues){
+int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturnValue *returnValues){
     int32_t i;
     int32_t result;
     if (returnValues == NULL){
         for (i=0; i < numThreads; i++){
-            result = pthread_join(threads[i], NULL);
-            if (result){
-                return CrossThreadingFail;
-            }
+            result |= pthread_join(threads[i], NULL);
+        }
+        if (result){
+            return CrossThreadingFail;
         }
     } else {
         for (i=0; i < numThreads; i++){
-            result = pthread_join(threads[i], returnValues[i]);
-            if (result){
-                return CrossThreadingFail;
-            }
+            result |= pthread_join(threads[i], &returnValues[i]);
+        }
+        if (result){
+            return CrossThreadingFail;
         }
     }
+    return 0;
 }
 #else
 #error "OS not supported"

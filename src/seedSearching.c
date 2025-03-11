@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <seedSearching.h>
 #include <compressedFile.h>
 #include <threading.h>
@@ -130,34 +132,34 @@ crossThreadReturnValue searchSeeds(void *arg){
     CompressedFile file;
     if (initCache(&cache, args.roundEnd)){
         perror("malloc failed: ");
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     //probably could be smaller (better cpu cache locality perhaps?)
     arrayType *groups = makeFunc(args.roundEnd);
     if (!groups){
         perror("malloc failed: ");
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     uint32_t nextPrint;
     const double startTime = (double)time_us();
     if (startTime == (double)UINT64_MAX){
         perror("time_us failed: ");
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     if (createCompressedFileSeeds(&file, NULL, NULL, args.roundEnd-args.roundStart, FRAGMENT_SIZE)){
         perror("allocating compressfile failed: ");
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     const int threadNum = args.seedStart / args.seedNum;
     char path[100];
     memset(path, 0, 100);
     if (snprintf(path, 100, "database/thread-%d", threadNum) > 100){
         fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename");
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     if (ensureDirectoryExists(path)){
         fprintf(stderr, "searchSeeds could not create a folder for thread %d", threadNum);
-        return 1;
+        return (crossThreadReturnValue) 1;
     }
     if (threadNum == 0){
         nextPrint = 0;
@@ -174,16 +176,16 @@ crossThreadReturnValue searchSeeds(void *arg){
             ) > 100
         ){
             fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename");     
-            return 1;
+            return (crossThreadReturnValue) 1;
         }
         if (setCompressedFilename(&file, &path[0], "ab")){
             perror("could not set filepath: ");
-            return 1;
+            return (crossThreadReturnValue) 1;
         }
         for (uint32_t i = 0; i < args.fragmentsPerFile; i++){
             for (uint32_t j = 0; j < args.seedsPerFragment; j++){
                 if (searchSingleSeed(seed, args.roundStart, args.roundEnd, &file, &cache, groups)){
-                    return 1;
+                    return (crossThreadReturnValue) 1;
                 }
                 seed++;
             }
@@ -191,13 +193,13 @@ crossThreadReturnValue searchSeeds(void *arg){
                 double currentTime = (double)time_us();
                 if (currentTime == (double)UINT64_MAX){
                     perror("time_us failed: ");
-                    return 1;
+                    return (crossThreadReturnValue) 1;
                 }
                 nextPrint = displayCommandLineInfo(seed, startTime, currentTime, &args);
             }
             if (dumpBufferToFile(&file, Z_BEST_COMPRESSION)){
                 fprintf(stderr, "dumpBufferToFile failed");
-                return 1;
+                return (crossThreadReturnValue) 1;
             }
             bool doPause = atomic_load(&threadsPause);
             if (threadNum == 0) {
@@ -226,5 +228,5 @@ crossThreadReturnValue searchSeeds(void *arg){
     free(groups);
     freeCompressedFile(&file);
     freeCache(&cache);
-    return 0;
+    return (crossThreadReturnValue) 0;
 }

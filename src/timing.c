@@ -33,7 +33,7 @@ uint64_t time_us (void) {
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0){
         return UINT64_MAX;
     }
-    uint64_t time_in_micros = 1000000 * tv.tv_sec + tv.tv_nsec / 1000;
+    uint64_t time_in_micros = 1000000 * ts.tv_sec + ts.tv_nsec / 1000;
     return time_in_micros;
 }
 

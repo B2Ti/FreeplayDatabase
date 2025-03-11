@@ -14,7 +14,7 @@ typedef DWORD crossThreadReturnValue;
 #elif defined __unix
 #include <pthread.h>
 typedef pthread_t crossThread;
-typedef uint64_t* crossThreadReturnValue;
+typedef void* crossThreadReturnValue;
 #else
 #error "OS not supported"
 #endif

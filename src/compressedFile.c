@@ -111,7 +111,7 @@ int32_t getInput(void) {
 #include <termios.h>
 #include <fcntl.h>
 
-int ensureDirectoryExists(char *path) {
+int ensureDirectoryExists(const char *path) {
     struct stat st;
 
     if (stat(path, &st) == 0) {

@@ -1,9 +1,9 @@
 // 1                ) clang src/*.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -DRUNNINGTEST=1 -fprofile-generate
 // 2                ) ./main-10.exe
 // 3 Powershell     ) rd -r  ./database
-// 3 Linux Terminal ) rm -rf ./database
+// 3 Linux Terminal ) rm -r ./database
 // 4                ) llvm-profdata merge ./*.profraw -output="default.profdata"
-// 5                ) clang src/*.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -fprofile-use
+// 5                ) clang src/*.c -Iinclude -Llib -lz -O3 -o"main-10.exe" -march=native -mfma -mavx2 -fprofile-use
 // 6                ) ./main-10.exe
 
 #include <threading.h>
@@ -55,7 +55,7 @@ int main(void){
     }
     printf("\n");
     for (uint32_t i = 0; i < NUM_THREADS; i++){
-        fprintf(stderr, "seedSearching thread %d returned with exit code %d\n", i, (int)values[i]);
+        fprintf(stderr, "seedSearching thread %d returned with exit code %zu\n", i, (size_t)values[i]);
     }
     return 0;
 }
