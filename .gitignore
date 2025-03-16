@@ -5,6 +5,7 @@
 
 # Created files
 database/
+__pycache__
 *.profraw
 *.profdata
 *.bin
@@ -50,4 +51,4 @@ lib/
 *.su
 *.idb
 *.pdb
-
+*.log

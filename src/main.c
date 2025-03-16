@@ -32,7 +32,7 @@ void test(void){
 
 int main(void){
     if (ensureDirectoryExists("database/")){
-        fprintf(stderr, "cannot create database directory");
+        fprintf(stderr, "main: could not create database directory\n");
         return 1;
     }
     seedSearchArg *args[NUM_THREADS];
@@ -44,7 +44,7 @@ int main(void){
                           FRAGMENT_SIZE, FRAGMENT_NUM,
                           BEGIN_ROUND, END_ROUND,
                           PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE);
-        if (args[i] == NULL){
+        if (!args[i]){
             perror("\nfailed to allocate argument: \n");
             return 1;
         }
@@ -56,7 +56,7 @@ int main(void){
     }
     printf("\n");
     for (uint32_t i = 0; i < NUM_THREADS; i++){
-        fprintf(stderr, "seedSearching thread %d returned with exit code %zu\n", i, (size_t)values[i]);
+        printf("seedSearching thread %d returned with exit code %zu\n", i, (size_t)values[i]);
     }
     return 0;
 }

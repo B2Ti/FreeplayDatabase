@@ -1,6 +1,7 @@
 #include <threading.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #if defined _WIN32
 int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *), void *args){
@@ -11,7 +12,8 @@ int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *)
                             (LPVOID) args,
                             0,
                             &threadID);
-    if (thread == NULL){
+    if (!thread){
+        fprintf(stderr, "CreateCrossThread: CreateThread returned error code %llu\n", GetLastError());
         return CrossThreadingFail;
     } else {
         return CrossThreadingSuccess;
@@ -25,17 +27,20 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
         result = WaitForMultipleObjects(numThreads, threads, true, INFINITE);
     }
     if (result == ((DWORD)0xFFFFFFFF)){
+        fprintf(stderr, "JoinCrossThreads: WaitForMultipleObjects returned error code %llu\n", GetLastError());
         return CrossThreadingFail;
     }
     if (result >= WAIT_ABANDONED_0){
+        fprintf(stderr, "JoinCrossThreads: WaitForMultipleObjects returned WAIT_ABANDONED\n");
         return AbandonedMutex;
     }
-    if (returnValues == NULL){
+    if (!returnValues){
         return CrossThreadingSuccess;
     }
     for (i=0; i < numThreads; i++){
         result = (DWORD)GetExitCodeThread(threads[i], &returnValues[i]);
         if (result == 0){
+            fprintf(stderr, "JoinCrossThreads: GetExitCodeThread returned error code %llu\n", GetLastError());
             return CrossThreadingFail;
         }
     }
@@ -44,16 +49,20 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
 #elif defined __unix || defined __APPLE__
 int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *), void *args){
     int resultCode = pthread_create(thread, NULL, func, args);
+    if (resultCode){
+        perror("CreateCrossThread unable to create new thread: ");
+    }
     return resultCode;
 }
 int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturnValue *returnValues){
     int32_t i = 0;
     int32_t result = 0;
-    if (returnValues == NULL){
+    if (!returnValues){
         for (i=0; i < numThreads; i++){
             result |= pthread_join(threads[i], NULL);
         }
         if (result){
+            perror("JoinCrossThreads pthread_join failed: ");
             return CrossThreadingFail;
         }
     } else {
@@ -61,6 +70,7 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
             result |= pthread_join(threads[i], &returnValues[i]);
         }
         if (result){
+            perror("JoinCrossThreads pthread_join failed: ");
             return CrossThreadingFail;
         }
     }

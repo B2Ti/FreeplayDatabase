@@ -17,16 +17,14 @@ FILE *fileopen(const char *filename, const char *mode){
     return file;
 }
 
-//29 bits per round plus extra 32 bits per seed rounded up to the next byte
-//number of rounds is determined at runtime but is probably 141 to 1000 = 860 rounds
-//and number of seeds compressed together is also determined at runtime but should be 10
-int createCompressedFileSeeds(CompressedFile *file, const char *filename, const char *mode, const int numRounds, const int numSeeds){
+int CompressedFile_InitSeeds(CompressedFile *file, const char *filename, const char *mode, const int numRounds, const int numSeeds){
     const size_t size = (7ULL + (96ULL + 33ULL * numRounds) * numSeeds) / 8ULL;
-    return createCompressedFile(file, filename, mode, size);
+    return CompressedFile_Init(file, filename, mode, size);
 }
 
-int createCompressedFile(CompressedFile *file, const char *filename, const char *mode, const size_t size){
-    if (!file){
+int CompressedFile_Init(CompressedFile *file, const char *filename, const char *mode, const size_t size){
+    if (!file) {
+        fprintf(stderr, "CompressedFile_Init: recived NULL pointer\n");
         return NULL_PTR_FAIL;
     }
     file->buffersize = size;
@@ -35,42 +33,59 @@ int createCompressedFile(CompressedFile *file, const char *filename, const char 
     } else {
         file->file = fileopen(filename, mode);
         if (!file->file){
+            perror("CompressedFile_Init: could not open file: ");
             return FILE_FAIL;
         }
     }
     file->index = 0;
     file->buffer = malloc(file->buffersize);
     if (!file->buffer){
+        fclose(file->file);
+        perror("CompressedFile_Init: could not allocate Byte buffer: ");
         return MALLOC_FAIL;
     }
     memset(file->buffer, 0, file->buffersize);
     return 0;
 }
 
-int setCompressedFilename(CompressedFile *file, const char *filename, const char *mode){
+int CompressedFile_SetFilename(CompressedFile *file, const char *filename, const char *mode){
+    if (!file){
+        fprintf(stderr, "CompressedFile_SetFilename: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if (file->file){
-        fclose(file->file);
+        int err = fclose(file->file);
         file->file = NULL;
+        if (err){
+            perror("CompressedFile_SetFilename: failed to close file: ");
+            return FILE_FAIL;
+        }
     }
     file->file = fileopen(filename, mode);
     if (!file->file){
+        perror("CompressedFile_SetFilename: failed to open file: ");
         return FILE_FAIL;
     }
     return 0;
 }
 
-void freeCompressedFile(CompressedFile *file){
-    if (!file) return;
-    if (file->file){
-        fclose(file->file);
-        file->file = NULL;
-    }
+int CompressedFile_Free(CompressedFile *file){
+    if (!file) return 0;
     if (file->buffer){
         free(file->buffer);
         file->buffer = NULL;
         file->buffersize = 0;
         file->index = 0;
     }
+    if (file->file){
+        int err = fclose(file->file);
+        file->file = NULL;
+        if (err){
+            perror("CompressedFile_Free: failed to close file: ");
+            return FILE_FAIL;
+        }
+    }
+    return 0;
 }
 
 #if defined _WIN32
@@ -85,12 +100,14 @@ int ensureDirectoryExists(const char *path){
             return 0;
         } else {
             //creation failed
+            fprintf(stderr, "ensureDirectoryExists: CreateDirectoryA returned with error code: %llu\n", GetLastError());
             return FILE_FAIL;
         }
     }
     if (attrs & FILE_ATTRIBUTE_DIRECTORY){
         return 0;
     }
+    fprintf(stderr, "ensureDirectoryExists: could not create directory\n");
     //something else already exists with the same name
     return FILE_FAIL;
 }
@@ -161,17 +178,26 @@ int32_t getInput(void) {
 #error "OS not supported"
 #endif
 
-int dumpBufferToFileDefault(CompressedFile *file){
-    return dumpBufferToFile(file, Z_DEFAULT_COMPRESSION);
+int CompressedFile_FlushDefault(CompressedFile *file){
+    return CompressedFile_Flush(file, Z_DEFAULT_COMPRESSION);
 }
 
-int dumpBufferToFile(CompressedFile *file, int compressionLevel){
-    if (file->file == NULL){
+int CompressedFile_Flush(CompressedFile *file, int compressionLevel){
+    if (!file){
+        fprintf(stderr, "CompressedFile_Flush: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
+    if (!file->file){
+        fprintf(stderr, "CompressedFile_Flush: FILE pointer is NULL\n");
         return FILE_FAIL;
     }
     size_t currentNumBytes = (file->index + 7) / 8;
     size_t numBytesOut = currentNumBytes + (currentNumBytes / 2) + 12;
     Byte *compressedData = malloc(numBytesOut);
+    if (!compressedData){
+        perror("CompressedFile_Flush: could not allocate Byte buffer: ");
+        return MALLOC_FAIL;
+    }
     size_t compressedLen;
     FILE *fptr = file->file;
 
@@ -180,27 +206,35 @@ int dumpBufferToFile(CompressedFile *file, int compressionLevel){
                        .avail_in=(uInt)currentNumBytes, .avail_out=(uInt)numBytesOut};
 
     if (deflateInit(&stream, compressionLevel) != Z_OK) {
-        fprintf(stderr, "Error: Unable to initialize zlib stream.\n");
+        fprintf(stderr, "CompressedFile_Flush: Unable to initialize zlib stream\n");
         free(compressedData);
         return MISC_FAIL;
     }
 
     if (deflate(&stream, Z_FINISH) != Z_STREAM_END) {
-        fprintf(stderr, "Error: Unable to compress data.\n");
-        deflateEnd(&stream);
+        fprintf(stderr, "CompressedFile_Flush: Unable to compress data\n");
+        if (deflateEnd(&stream)){
+            fprintf(stderr, "CompressedFile_Flush: deflateEnd returned an error when cleaning up failed compression\n");
+        }
         free(compressedData);
         return MISC_FAIL;
     }
 
-    deflateEnd(&stream);
+    if (deflateEnd(&stream)){
+        fprintf(stderr, "CompressedFile_Flush: deflateEnd returned an error\n");
+        free(compressedData);
+        return MISC_FAIL;
+    }
     compressedLen = numBytesOut - stream.avail_out;
 
     if (fwrite(&compressedLen, sizeof(size_t), 1, fptr) != 1){
-        fprintf(stderr, "Error: Unable to write data.\n");
+        fprintf(stderr, "CompressedFile_Flush: Unable to write data\n");
+        free(compressedData);
         return FILE_FAIL;
     }
     if (fwrite(compressedData, 1, compressedLen, fptr) != compressedLen){
-        fprintf(stderr, "Error: Unable to write data.\n");
+        fprintf(stderr, "CompressedFile_Flush: Unable to write data\n");
+        free(compressedData);
         return FILE_FAIL;
     }
     //for (i = 0; i < compressedLen; i++){
@@ -214,19 +248,51 @@ int dumpBufferToFile(CompressedFile *file, int compressionLevel){
     return 0;
 }
 
-int readBufferFromFile(CompressedFile *file){
+int CompressedFile_SkipNextBuffer(CompressedFile *file){
+    if (!file){
+        fprintf(stderr, "CompressedFile_SkipNextBuffer: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if (!file->file){
+        fprintf(stderr, "CompressedFile_SkipNextBuffer: FILE pointer is NULL\n");
         return FILE_FAIL;
     }
     FILE *fptr = file->file;
     size_t size;
     if (fread(&size, sizeof(size_t), 1, fptr) != 1){
-        fprintf(stderr, "Error: Unable to read data.\n");
+        fprintf(stderr, "CompressedFile_SkipNextBuffer: failed to read buffersize from file\n");
+        return FILE_FAIL;
+    }
+    if (fseek(fptr, size, SEEK_CUR)){
+        fprintf(stderr, "CompressedFile_SkipNextBuffer: failed to seek past the next buffer\n");
+        return FILE_FAIL;
+    }
+    return 0;
+}
+
+int CompressedFile_LoadNextBuffer(CompressedFile *file){
+    if (!file){
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
+    if (!file->file){
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: FILE pointer is NULL\n");
+        return FILE_FAIL;
+    }
+    FILE *fptr = file->file;
+    size_t size;
+    if (fread(&size, sizeof(size_t), 1, fptr) != 1){
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: Unable to read data\n");
         return FILE_FAIL;
     }
     Byte *buffer = malloc(size);
+    if (!buffer){
+        perror("CompressedFile_LoadNextBuffer: Unable to allocate input buffer\n");
+        return MALLOC_FAIL;
+    }
+
     if (fread(buffer, 1, size, fptr) != size){
-        fprintf(stderr, "Error: Unable to read data.\n");
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: Unable to read data\n");
         return FILE_FAIL;
     }
     
@@ -235,15 +301,20 @@ int readBufferFromFile(CompressedFile *file){
         .avail_in=(uInt)size, .avail_out=(uInt)file->buffersize};
 
     if (inflateInit(&stream) != Z_OK) {
-        fprintf(stderr, "Error: Unable to initialize zlib stream.\n");
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: Unable to initialize zlib stream\n");
         free(buffer);
         return MISC_FAIL;
     }
 
     if (inflate(&stream, Z_FINISH) != Z_STREAM_END){
-        fprintf(stderr, "Error: Unable to decompress data.\n");
-        inflateEnd(&stream);
+        fprintf(stderr, "CompressedFile_LoadNextBuffer: Unable to decompress data\n");
+        if (inflateEnd(&stream)){
+            fprintf(stderr, "CompressedFile_Flush: inflateEnd returned an error when cleaning up failed compression\n");
+        }
         return MISC_FAIL;
+    }
+    if (inflateEnd(&stream)){
+        fprintf(stderr, "CompressedFile_Flush: inflateEnd returned an error\n");
     }
     file->index = 0;
 
@@ -257,7 +328,7 @@ int readBufferFromFile(CompressedFile *file){
  * @return
  * 0x01 - up to 8 bits that fell off the top.
  */
-unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const unsigned char shift){
+static unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const unsigned char shift){
     unsigned char tmp_a = 0, tmp_b;
     size_t i;
     for (i = 0; i < bufferSize; i++){
@@ -268,13 +339,17 @@ unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const 
     return tmp_a;
 } 
 
-int writeToBuffer56(CompressedFile *file, uint64_t data, const uint32_t nbits){
+int CompressedFile_Write56(CompressedFile *file, uint64_t data, const uint32_t nbits){
+    if (!file){
+        fprintf(stderr, "CompressedFile_Write56: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if ((nbits + file->index) >= (file->buffersize * 8)){
-        fprintf(stderr, "out of space to write to buffer");
+        fprintf(stderr, "CompressedFile_Write56: out of space to write to buffer\n");
         return MISC_FAIL;
     }
     if (nbits > 56){
-        fprintf(stderr, "the number of bits must not excede 56, due to bit manipulation requirements");
+        fprintf(stderr, "CompressedFile_Write56: the number of bits must not excede 56, due to bit manipulation requirements\n");
         return MISC_FAIL;
     }
     if (nbits == 0){
@@ -309,12 +384,13 @@ void _writeToBufferNoShift(CompressedFile *file, const Byte *data, const uint32_
     file->index += nbits;
 }
 
-/**
- * @param data a reference to the data to be written to the file, ** this function is destructive to the data **
- */
-int writeToBuffer(CompressedFile *file, const Byte *data, const uint32_t nbits){
+int CompressedFile_Write(CompressedFile *file, const Byte *data, const uint32_t nbits){
+    if (!file){
+        fprintf(stderr, "CompressedFile_Write: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if ((nbits + file->index) >= (file->buffersize * 8)){
-        fprintf(stderr, "out of space to write to buffer");
+        fprintf(stderr, "CompressedFile_Write: out of space to write to buffer\n");
         return MISC_FAIL;
     }
     if (file->index % 8 == 0){
@@ -348,13 +424,43 @@ int writeToBuffer(CompressedFile *file, const Byte *data, const uint32_t nbits){
     return 0;
 }
 
-int readFromBufferedFile56(CompressedFile *file, uint64_t *data, const uint32_t nbits){
+size_t CompressedFile_RemainingBits(const CompressedFile *file){
+    if (!file) return 0;
+    return file->buffersize * 8 - file->index;
+}
+
+int CompressedFile_ShiftBufferIndex(CompressedFile *file, const int32_t shift){
+    if (!file){
+        fprintf(stderr, "CompressedFile_ShiftBufferIndex: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
+    if (shift < 0){
+        if ((size_t)(-shift) > file->index){
+            fprintf(stderr, "CompressedFile_ShiftBufferIndex: cannot shift before the start of the buffer\n");
+            return MISC_FAIL;
+        }
+    }
+    else {
+        if ((file->index + shift) > (file->buffersize * 8)){
+            fprintf(stderr, "CompressedFile_ShiftBufferIndex: cannot shift past the end of the buffer\n");
+            return MISC_FAIL;
+        }
+    }
+    file->index += shift;
+    return 0;
+}
+
+int CompressedFile_Read56(CompressedFile *file, uint64_t *data, const uint32_t nbits){
+    if (!file){
+        fprintf(stderr, "CompressedFile_Read56: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if ((nbits + file->index) >= (file->buffersize * 8)){
-        fprintf(stderr, "out of space to read from buffer");
+        fprintf(stderr, "CompressedFile_Read56: out of space to read from buffer\n");
         return MISC_FAIL;
     }
     if (nbits > 56){
-        fprintf(stderr, "the number of bits must not excede 56, due to bit manipulation requirements");
+        fprintf(stderr, "CompressedFile_Read56: the number of bits must not excede 56, due to bit manipulation requirements\n");
         return MISC_FAIL;
     }
     if (nbits == 0){
@@ -382,9 +488,13 @@ void _readFromBufferNoShift(CompressedFile *file, Byte *data, const uint32_t nbi
     file->index += nbits;
 }
 
-int readFromBufferedFile(CompressedFile *file, Byte *data, const uint32_t nbits){
+int CompressedFile_Read(CompressedFile *file, Byte *data, const uint32_t nbits){
+    if (!file){
+        fprintf(stderr, "CompressedFile_Read: recived NULL pointer\n");
+        return NULL_PTR_FAIL;
+    }
     if ((nbits + file->index) >= (file->buffersize * 8)){
-        fprintf(stderr, "out of space to read from buffer");
+        fprintf(stderr, "CompressedFile_Read: out of space to read from buffer\n");
         return MISC_FAIL;
     }
     if (file->index % 8 == 0){

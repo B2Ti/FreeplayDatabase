@@ -22,7 +22,7 @@ seedSearchArg *makearg(uint32_t seedStart, uint32_t seedNum,
                        uint16_t roundStart, uint16_t roundEnd,
                        uint32_t progBarType, uint32_t progBarValue){
     seedSearchArg *arg = malloc(sizeof(seedSearchArg));
-    if (arg == NULL) {
+    if (!arg) {
         return arg;
     }
     arg->roundStart = roundStart;
@@ -40,7 +40,7 @@ void freearg(seedSearchArg *arg){
     free(arg);
 }
 
-uint32_t displayCommandLineInfo(uint32_t seed, double lastTime, double timeNow, seedSearchArg *args){
+static uint32_t displayCommandLineInfo(uint32_t seed, double lastTime, double timeNow, seedSearchArg *args){
     double totalTimeTaken = (timeNow - lastTime)*0.000001;
 
     uint32_t amountComplete = seed - args->seedStart;
@@ -79,8 +79,8 @@ uint32_t displayCommandLineInfo(uint32_t seed, double lastTime, double timeNow, 
  #define makeFunc makeBoolGroupsArray
 #endif
 
-int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, CompressedFile *file, ShuffleCache *cache, const arrayType *groupsArray){
-    if (writeToBuffer56(file, seed, 32)){
+static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, CompressedFile *file, ShuffleCache *cache, const arrayType *groupsArray){
+    if (CompressedFile_Write56(file, seed, 32)){
         return 1;
     }
     for (uint16_t round = roundStart; round < roundEnd; round++){
@@ -111,13 +111,13 @@ int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint1
                 nbads+=group.count;
             }
         }
-        if (writeToBuffer56(file, nfbads, 6)) {
+        if (CompressedFile_Write56(file, nfbads, 6)) {
             return 1;
         }
-        if (writeToBuffer56(file, nbads, 6)) {
+        if (CompressedFile_Write56(file, nbads, 6)) {
             return 1;
         }
-        if (writeToBuffer56(file, (uint64_t)(cash * 50), 21)){
+        if (CompressedFile_Write56(file, (uint64_t)(cash * 50), 21)){
             return 1;
         }
     }
@@ -146,7 +146,7 @@ crossThreadReturnValue searchSeeds(void *arg){
         perror("time_us failed: ");
         return (crossThreadReturnValue) 1;
     }
-    if (createCompressedFileSeeds(&file, NULL, NULL, args.roundEnd-args.roundStart, FRAGMENT_SIZE)){
+    if (CompressedFile_InitSeeds(&file, NULL, NULL, args.roundEnd-args.roundStart, FRAGMENT_SIZE)){
         perror("allocating compressfile failed: ");
         return (crossThreadReturnValue) 1;
     }
@@ -154,11 +154,11 @@ crossThreadReturnValue searchSeeds(void *arg){
     char path[100];
     memset(path, 0, 100);
     if (snprintf(path, 100, "database/thread-%d", threadNum) > 100){
-        fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename");
+        fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename\n");
         return (crossThreadReturnValue) 1;
     }
     if (ensureDirectoryExists(path)){
-        fprintf(stderr, "searchSeeds could not create a folder for thread %d", threadNum);
+        fprintf(stderr, "searchSeeds could not create a folder for thread %d\n", threadNum);
         return (crossThreadReturnValue) 1;
     }
     if (threadNum == 0){
@@ -175,10 +175,10 @@ crossThreadReturnValue searchSeeds(void *arg){
                 seed, seed + args.fragmentsPerFile * args.seedsPerFragment - 1
             ) > 100
         ){
-            fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename");     
+            fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename\n");     
             return (crossThreadReturnValue) 1;
         }
-        if (setCompressedFilename(&file, &path[0], "ab")){
+        if (CompressedFile_SetFilename(&file, &path[0], "ab")){
             perror("could not set filepath: ");
             return (crossThreadReturnValue) 1;
         }
@@ -197,8 +197,8 @@ crossThreadReturnValue searchSeeds(void *arg){
                 }
                 nextPrint = displayCommandLineInfo(seed, startTime, currentTime, &args);
             }
-            if (dumpBufferToFile(&file, Z_BEST_COMPRESSION)){
-                fprintf(stderr, "dumpBufferToFile failed");
+            if (CompressedFile_Flush(&file, Z_BEST_COMPRESSION)){
+                fprintf(stderr, "CompressedFile_Flush failed\n");
                 return (crossThreadReturnValue) 1;
             }
             bool doPause = atomic_load(&threadsPause);
@@ -216,17 +216,17 @@ crossThreadReturnValue searchSeeds(void *arg){
                     }
                 }
             } else if (doPause) {
-                printf("\nthread %d pausing", threadNum);
+                printf("\nthread %d pausing\n", threadNum);
                 while (doPause) {
                     sleep_ms(100);
                     doPause = atomic_load(&threadsPause);
                 }
-                printf("\nthread %d continuing", threadNum);
+                printf("\nthread %d continuing\n", threadNum);
             }
         }
     }
     free(groups);
-    freeCompressedFile(&file);
+    CompressedFile_Free(&file);
     freeCache(&cache);
     return (crossThreadReturnValue) 0;
 }

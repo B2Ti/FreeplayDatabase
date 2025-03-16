@@ -26,7 +26,8 @@ Byte *makeGroupsArray(size_t maximumRound){
     size_t n_bits = NUM_GROUPS * maximumRound;
     size_t bytes = ((n_bits+7) / 8);
     Byte *bits = malloc(bytes);
-    if (bits == NULL){
+    if (!bits){
+        perror("makeGroupsArray could not allocate bits: ");
         return bits;
     }
     bool inbounds;
@@ -54,7 +55,8 @@ Byte *makeGroupsArray(size_t maximumRound){
 bool *makeBoolGroupsArray(size_t maximumRound){
     size_t n_bits = NUM_GROUPS * maximumRound;
     bool *bools = malloc(n_bits);
-    if (bools == NULL){
+    if (!bools){
+        perror("makeBoolGroupsArray could not allocate bools: ");
         return bools;
     }
     bool inbounds;
