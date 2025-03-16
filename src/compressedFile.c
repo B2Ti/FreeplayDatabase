@@ -100,7 +100,7 @@ int ensureDirectoryExists(const char *path){
             return 0;
         } else {
             //creation failed
-            fprintf(stderr, "ensureDirectoryExists: CreateDirectoryA returned with error code: %llu\n", GetLastError());
+            fprintf(stderr, "ensureDirectoryExists: CreateDirectoryA returned with error code: %lu\n", GetLastError());
             return FILE_FAIL;
         }
     }

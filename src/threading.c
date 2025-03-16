@@ -13,7 +13,7 @@ int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *)
                             0,
                             &threadID);
     if (!thread){
-        fprintf(stderr, "CreateCrossThread: CreateThread returned error code %llu\n", GetLastError());
+        fprintf(stderr, "CreateCrossThread: CreateThread returned error code %lu\n", GetLastError());
         return CrossThreadingFail;
     } else {
         return CrossThreadingSuccess;
@@ -27,7 +27,7 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
         result = WaitForMultipleObjects(numThreads, threads, true, INFINITE);
     }
     if (result == ((DWORD)0xFFFFFFFF)){
-        fprintf(stderr, "JoinCrossThreads: WaitForMultipleObjects returned error code %llu\n", GetLastError());
+        fprintf(stderr, "JoinCrossThreads: WaitForMultipleObjects returned error code %lu\n", GetLastError());
         return CrossThreadingFail;
     }
     if (result >= WAIT_ABANDONED_0){
@@ -40,7 +40,7 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
     for (i=0; i < numThreads; i++){
         result = (DWORD)GetExitCodeThread(threads[i], &returnValues[i]);
         if (result == 0){
-            fprintf(stderr, "JoinCrossThreads: GetExitCodeThread returned error code %llu\n", GetLastError());
+            fprintf(stderr, "JoinCrossThreads: GetExitCodeThread returned error code %lu\n", GetLastError());
             return CrossThreadingFail;
         }
     }
