@@ -40,11 +40,6 @@ class Reader(ctypes.CDLL):
     readSeeds: "ctypes._FuncPointer"
     freeResults: "ctypes._FuncPointer"
 
-def NULL_check(ptr):
-    if not ptr:
-        return None
-    return ptr
-
 reader = Reader("./reader.dll")
 reader.openFile.argtypes = [ctypes.POINTER(DatabaseFile), ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
 reader.openFile.restype = ctypes.c_int
@@ -59,7 +54,7 @@ reader.freeResults.restype = None
 reader.read.argtypes = [ctypes.POINTER(DatabaseFile), ctypes.POINTER(Result)]
 reader.read.restype = ctypes.c_int
 reader.readSeeds.argtypes = [ctypes.c_uint32, ctypes.c_uint32]
-reader.readSeeds.restype = NULL_check
+reader.readSeeds.restype = ctypes.c_void_p
 
 def read(file: DatabaseFile) -> list[SeedData]:
     result_ptr = reader.allocateResults()
@@ -82,8 +77,8 @@ def read(file: DatabaseFile) -> list[SeedData]:
 def readSeeds(low: int, high: int):
     return_ptr = reader.readSeeds(ctypes.c_uint32(low), ctypes.c_uint32(high))
     if return_ptr is not None:
-        #results_ptr = ctypes.cast(return_ptr, ctypes.POINTER(Result))
-        results: list[Result] = return_ptr[:(high-low+1)]
+        results_ptr = ctypes.cast(return_ptr, ctypes.POINTER(Result))
+        results: list[Result] = results_ptr[:(high-low+1)]
         all_results = []
         for result in results:
             data: SeedData = {
@@ -93,20 +88,20 @@ def readSeeds(low: int, high: int):
                 "cash": result.cash[:]
             }
             all_results.append(data)
-        reader.freeResults(return_ptr)
+        reader.freeResults(results_ptr)
         return all_results
     else:
         print("NULL ptr error", file=sys.stderr)
 
 def main():
-    s1, s2 = 99999, 100999
+    s1, s2 = 99, 1010
     start = pfc()
     data = readSeeds(s1, s2)
     end = pfc()
     print(f"Took {end-start}s to read {s2 - s1 + 1} seeds")
     start = pfc()
     file = DatabaseFile()
-    res = reader.openFile(ctypes.pointer(file), "database/thread-0/seeds_0-99999.bin".encode(), "rb".encode(), 355538)
+    res = reader.openFile(ctypes.pointer(file), "database/thread-0/seeds_0-999.bin".encode(), "rb".encode(), 355538)
     if res:
         raise RuntimeError("Error opening file")
     results = read(file)
