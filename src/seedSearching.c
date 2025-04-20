@@ -84,14 +84,59 @@ static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, cons
         return 1;
     }
     for (uint16_t round = roundStart; round < roundEnd; round++){
-        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round);
+        #ifndef USE_BOOL_ARRAY
+        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round, groupsArray);
+        #else
+        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed +round, NULL);
+        #endif
         double cash = 0;
         float budget = (round * 4000 - 225000) * groupIdxs->budget_mult;
         const uint32_t offset = ((uint32_t) round) * NUM_GROUPS;
         uint16_t nfbads = 0, nbads = 0;
-        //#pragma unroll
+        #ifndef USE_BOOL_ARRAY
+        if (round >= 511){
+            for (uint16_t i = 0; i < MAX_COUNT; i++){
+                if (groupIdxs->r511Groups[i] == R511END){
+                    break;
+                }
+                const BoundlessGroup group = getBoundlessGroup(groupIdxs->r511Groups[i]);
+                if (group.score > budget){
+                    continue;
+                }
+                budget -= group.score;
+                cash += getCash(group.type, round) * (double)group.count;
+                if (group.type == FBAD_TYPE){
+                    nfbads+=group.count;
+                }
+                if (group.type == BAD_TYPE){
+                    nbads+=group.count;
+                }
+            }
+        } else {
+            for (uint16_t i = 0; i < NUM_GROUPS; i++){
+                if (!bitget(
+                    groupsArray,
+                    offset + groupIdxs->array[i]
+                )){
+                    continue;
+                }
+                const BoundlessGroup group = getBoundlessGroup(groupIdxs->array[i]);
+                if (group.score > budget){
+                    continue;
+                }
+                budget -= group.score;
+                cash += getCash(group.type, round) * (double)group.count;
+                if (group.type == FBAD_TYPE){
+                    nfbads+=group.count;
+                }
+                if (group.type == BAD_TYPE){
+                    nbads+=group.count;
+                }
+            }
+        }
+        #else
         for (uint16_t i = 0; i < NUM_GROUPS; i++){
-            if (!getFunc(
+            if (!boolget(
                 groupsArray,
                 offset + groupIdxs->array[i]
             )){
@@ -103,7 +148,6 @@ static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, cons
             }
             budget -= group.score;
             cash += getCash(group.type, round) * (double)group.count;
-            //breaks if the bad is like, camgrow
             if (group.type == FBAD_TYPE){
                 nfbads+=group.count;
             }
@@ -111,6 +155,7 @@ static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, cons
                 nbads+=group.count;
             }
         }
+        #endif
         if (CompressedFile_Write56(file, nfbads, 6)) {
             return 1;
         }
@@ -130,16 +175,24 @@ crossThreadReturnValue searchSeeds(void *arg){
     seedSearchArg args = *(seedSearchArg*)arg;
     ShuffleCache cache;
     CompressedFile file;
-    if (initCache(&cache, args.roundEnd)){
-        perror("malloc failed: ");
-        return (crossThreadReturnValue) 1;
-    }
-    //probably could be smaller (better cpu cache locality perhaps?)
     arrayType *groups = makeFunc(args.roundEnd);
     if (!groups){
         perror("malloc failed: ");
         return (crossThreadReturnValue) 1;
     }
+    if (initCache(
+        &cache,
+        args.roundEnd,
+        #ifndef USE_BOOL_ARRAY
+        groups
+        #else
+        NULL
+        #endif
+    )){
+        perror("malloc failed: ");
+        return (crossThreadReturnValue) 1;
+    }
+    //probably could be smaller (better cpu cache locality perhaps?)
     uint32_t nextPrint;
     const double startTime = (double)time_us();
     if (startTime == (double)UINT64_MAX){
@@ -173,7 +226,7 @@ crossThreadReturnValue searchSeeds(void *arg){
         if (snprintf(
                 path, 100, "database/thread-%d/seeds_%d-%d.bin", threadNum,
                 seed, seed + args.fragmentsPerFile * args.seedsPerFragment - 1
-            ) > 100
+            ) >= 100
         ){
             fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename\n");     
             return (crossThreadReturnValue) 1;

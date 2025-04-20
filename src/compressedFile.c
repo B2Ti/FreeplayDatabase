@@ -40,7 +40,9 @@ int CompressedFile_Init(CompressedFile *file, const char *filename, const char *
     file->index = 0;
     file->buffer = malloc(file->buffersize);
     if (!file->buffer){
-        fclose(file->file);
+        if (file->file) {
+            fclose(file->file);
+        }
         perror("CompressedFile_Init: could not allocate Byte buffer: ");
         return MALLOC_FAIL;
     }
@@ -321,14 +323,7 @@ int CompressedFile_LoadNextBuffer(CompressedFile *file){
     return 0;
 }
 
-/**
- * @param bufferSize - the size of the buffer in bytes
- * @param shift - 0 < shift < 8, how many bits to shift the buffer up
- * eg, 0xaa 0xaa << 1 -> 0x55 0x54 +
- * @return
- * 0x01 - up to 8 bits that fell off the top.
- */
-static unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const unsigned char shift){
+unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const unsigned char shift){
     unsigned char tmp_a = 0, tmp_b;
     size_t i;
     for (i = 0; i < bufferSize; i++){

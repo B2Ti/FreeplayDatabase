@@ -5,6 +5,7 @@
 
 # Created files
 database/
+statistics/
 __pycache__
 *.profraw
 *.profdata

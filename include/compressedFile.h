@@ -20,6 +20,15 @@ int32_t getInput(void);
  */
 int ensureDirectoryExists(const char *directoryName);
 
+/**
+ * @param bufferSize - the size of the buffer in bytes
+ * @param shift - 0 < shift < 8, how many bits to shift the buffer up
+ * eg, 0xaa 0xaa << 1 -> 0x55 0x54 +
+ * @return
+ * 0x01 - up to 8 bits that fell off the top.
+ */
+unsigned char shiftBuffer(unsigned char *buffer, const size_t bufferSize, const unsigned char shift);
+
 typedef struct CompressedFile {
     FILE *file;
     Byte *buffer;

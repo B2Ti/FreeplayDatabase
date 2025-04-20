@@ -23,4 +23,5 @@ typedef void* crossThreadReturnValue;
 int CreateCrossThread(crossThread *thread, crossThreadReturnValue (func)(void *), void *args);
 //returnValues = ptr to return value pointers, which will be set to the exit/return values of the threads
 //if returnValues == NULL the exit/return values will be discarded
+//this function is required to close the threads on unix systems, and will also do so for windows
 int JoinCrossThreads(int32_t numThreads, crossThread *theads, crossThreadReturnValue *returnValues);
