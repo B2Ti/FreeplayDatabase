@@ -14,6 +14,9 @@
 
 #define BEGIN_ROUND 141
 #define END_ROUND 1000
+//at most this many groups can actually be sent
+#define MAX_COUNT 76
+#define R511END 0xffff
 
 #ifndef PROGRESS_BAR_VALUE
  #define PROGRESS_BAR_VALUE 50

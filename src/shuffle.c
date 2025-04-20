@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <bitsArray.h>
 
 float getNextSeed(SeededRandom *rand){
     rand->seed = (rand->seed * 0x41a7LL) % 0x7FFFFFFFLL;
@@ -40,23 +42,43 @@ void shuffleInPlace16(uint16_t array[], const size_t len, SeededRandom *rand){
     }
 }
 
-void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed){
+
+void setEntryValidity(ShuffleCacheEntry *entry, const Byte *validityArray){
+    const uint32_t offset = 512 * NUM_GROUPS;
+    uint16_t groups = 0;
+    for(uint16_t i = 0; i < MAX_COUNT; i++){
+        entry->r511Groups[i] = R511END;
+    }
+    for (uint16_t i = 0; i < NUM_GROUPS; i++){
+        if (!bitget(validityArray, offset + entry->array[i])){
+            continue;
+        }
+        assert(groups < MAX_COUNT);
+        entry->r511Groups[groups] = entry->array[i];
+        groups++;
+    }
+}
+
+void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
     for (uint16_t i = 0; i < NUM_GROUPS; i++){
         entry->array[i] = i;
     }
     entry->seed = seed;
     SeededRandom rand = {seed};
     shuffleInPlace16(entry->array, NUM_GROUPS, &rand);
+    if (validityArray){
+        setEntryValidity(entry, validityArray);
+    }
     entry->budget_mult = 1.5 - getNextSeed(&rand);
 }
 
-int initCache(ShuffleCache *cache, const size_t cacheSize){
+int initCache(ShuffleCache *cache, const size_t cacheSize, const Byte *validityArray){
     cache->cache = malloc(cacheSize * sizeof(ShuffleCacheEntry));
     if (!cache->cache){
         return -1;
     }
     for (size_t i = 0; i < cacheSize; i++){
-        setEntrySeed(&cache->cache[i], i);
+        setEntrySeed(&cache->cache[i], i, validityArray);
     }
     cache->size=cacheSize;
     return 0;
@@ -68,10 +90,10 @@ void freeCache(ShuffleCache *cache){
     cache->size = 0;
 }
 
-ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed){
+ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, const Byte *validityEntry){
     const uint32_t index = seed % cache->size;
     if ((uint32_t)cache->cache[index].seed != seed){
-        setEntrySeed(&cache->cache[index], seed);
+        setEntrySeed(&cache->cache[index], seed, validityEntry);
     }
     return &cache->cache[index];
 }

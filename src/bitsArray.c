@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <defines.h>
 #include <freeplayGroups.h>
 #include <bitsArray.h>
@@ -41,7 +42,7 @@ Byte *makeGroupsArray(size_t maximumRound){
             for (int j = 0; j < NUM_BOUNDS; j++){
                 double lbound = group.bounds[2*j];
                 double ubound = group.bounds[1 + 2*j];
-                if ((lbound <= round_d) & (round_d <= ubound)){
+                if ((lbound <= round_d) && (round_d <= ubound)){
                     inbounds = true;
                     break;
                 }
