@@ -11,10 +11,11 @@
 #include <compressedFile.h>
 #include <seedSearching.h>
 #include <defines.h>
+#include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-
-void test(void){
+int test(void){
     seedSearchArg *args;
     args = makearg(0, FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE,
                    FRAGMENT_SIZE, FRAGMENT_NUM, 
@@ -22,11 +23,11 @@ void test(void){
                    PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE);
     if (args == NULL){
         perror("failed to allocate argument: ");
-        exit(1);
+        return 1;
     }
     crossThreadReturnValue v = searchSeeds((void *)args);
-    printf("\nthread exited with code: %d\n", (int)v);
-    return;
+    printf("\nthread exited with code: %" PRIuPTR "\n", (uintptr_t)v);
+    return 0;
 }
 
 

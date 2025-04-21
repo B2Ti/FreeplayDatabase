@@ -13,9 +13,9 @@
 #include <seedStatistics.h>
 #include <defines.h>
 #include <stdio.h>
+#include <inttypes.h>
 
-/*
-void test(void){
+int test(void){
     seedSearchArg *args;
     args = makearg(0, FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE,
                    FRAGMENT_SIZE, FRAGMENT_NUM, 
@@ -23,13 +23,12 @@ void test(void){
                    PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE);
     if (args == NULL){
         perror("failed to allocate argument: ");
-        exit(1);
+        return 1;
     }
-    crossThreadReturnValue v = searchSeeds((void *)args);
-    printf("\nthread exited with code: %d\n", (int)v);
-    return;
+    crossThreadReturnValue v = seedStatistics((void *)args);
+    printf("\nthread exited with code: %" PRIuPTR "\n", (uintptr_t)v);
+    return 0;
 }
-*/
 
 int main(void){
     if (ensureDirectoryExists("statistics/")){
@@ -39,9 +38,9 @@ int main(void){
     seedSearchArg *args[NUM_THREADS];
     crossThread threads[NUM_THREADS];
     crossThreadReturnValue values[NUM_THREADS];
-    for (uint32_t j = 0; j < 100; j++){
+    for (uint32_t j = 0; j < 1000; j++){
         for (uint32_t i = 0; i < NUM_THREADS; i++){
-            size_t seedsPerFile = FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE / 100;
+            size_t seedsPerFile = FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE / 1000;
             args[i] = makearg((NUM_THREADS * j + i) * seedsPerFile,
                               seedsPerFile,
                               FRAGMENT_SIZE, FRAGMENT_NUM,

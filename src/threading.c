@@ -94,7 +94,7 @@ int JoinCrossThreads(int32_t numThreads, crossThread *threads, crossThreadReturn
     }
     if (result){
         perror("pthread_join call failed: ");
-        return crossThreadingFail;
+        return CrossThreadingFail;
     }
     return 0;
 }
