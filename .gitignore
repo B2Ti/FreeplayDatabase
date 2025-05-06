@@ -9,6 +9,7 @@ compile/
 database/
 statistics/
 obj/
+build/
 __pycache__
 *.profraw
 *.profdata
