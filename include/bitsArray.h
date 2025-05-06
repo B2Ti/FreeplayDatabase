@@ -2,7 +2,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef unsigned char Byte;
+#ifndef ZCONF_H
+ typedef unsigned char Byte;
+#endif
 
 Byte bitget(const Byte *bits, const size_t idx);
 void bitset(Byte *bits, size_t idx, bool value);

@@ -11,7 +11,7 @@ float getNextSeed(SeededRandom *rand){
     return value;
 }
 
-int64_t _getNextSeedBounded(SeededRandom *rand, const int64_t min, const int64_t max){
+static int64_t _getNextSeedBounded(SeededRandom *rand, const int64_t min, const int64_t max){
     const int64_t inv_range = min - max;
     rand->seed = (((int64_t)(rand->seed)) * 0x41a7LL) % 0x7FFFFFFFLL;
     int64_t shift = rand->seed % inv_range;
@@ -33,17 +33,7 @@ int64_t getNextSeedBounded(SeededRandom *rand, int64_t min, int64_t max){
     return _getNextSeedBounded(rand, min, max);
 }
 
-void shuffleInPlace16(uint16_t array[], const size_t len, SeededRandom *rand){
-    for (size_t i = 0; i < len; i++){
-        int64_t index = getNextSeedBounded(rand, i, len);
-        const uint16_t tmp = array[i];
-        array[i] = array[index];
-        array[index] = tmp;
-    }
-}
-
-
-void setEntryValidity(ShuffleCacheEntry *entry, const Byte *validityArray){
+static void setEntryValidity(ShuffleCacheEntry *entry, const Byte *validityArray){
     const uint32_t offset = 512 * NUM_GROUPS;
     uint16_t groups = 0;
     for(uint16_t i = 0; i < MAX_COUNT; i++){
@@ -59,7 +49,47 @@ void setEntryValidity(ShuffleCacheEntry *entry, const Byte *validityArray){
     }
 }
 
-void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
+#ifdef VER_44
+static void shuffleSeeded16(uint16_t array[], const size_t _len, SeededRandom *rand){
+    const size_t len = _len - 1;
+    int32_t i = len;
+    while (true){
+        float nextSeed = getNextSeed(rand);
+        int32_t idx = (int32_t)(nextSeed * (float)len);
+        const uint16_t tmp = array[i];
+        array[i] = array[idx];
+        array[idx] = tmp;
+        if (i <= 0){
+            return;
+        }
+        i--;
+    }
+}
+
+static void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
+    for (uint16_t i = 0; i < NUM_GROUPS; i++){
+        entry->array[i] = i;
+    }
+    entry->seed = seed;
+    SeededRandom rand = {seed};
+    shuffleSeeded16(entry->array, NUM_GROUPS, &rand);
+    if (validityArray){
+        setEntryValidity(entry, validityArray);
+    }
+    rand.seed = seed;
+    entry->budget_mult = 1.5 - getNextSeed(&rand);
+}
+#else
+static void shuffleInPlace16(uint16_t array[], const size_t len, SeededRandom *rand){
+    for (size_t i = 0; i < len; i++){
+        int64_t index = getNextSeedBounded(rand, i, len);
+        const uint16_t tmp = array[i];
+        array[i] = array[index];
+        array[index] = tmp;
+    }
+}
+
+static void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
     for (uint16_t i = 0; i < NUM_GROUPS; i++){
         entry->array[i] = i;
     }
@@ -71,6 +101,7 @@ void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *val
     }
     entry->budget_mult = 1.5 - getNextSeed(&rand);
 }
+#endif
 
 int initCache(ShuffleCache *cache, const size_t cacheSize, const Byte *validityArray){
     cache->cache = malloc(cacheSize * sizeof(ShuffleCacheEntry));

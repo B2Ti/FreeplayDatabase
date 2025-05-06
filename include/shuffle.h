@@ -23,6 +23,7 @@ typedef struct ShuffleCache {
 } ShuffleCache;
 
 float getNextSeed(SeededRandom* rand);
+int64_t getNextSeedBounded(SeededRandom *rand, int64_t min, int64_t max);
 /**
  * @param validityArray optional, creates the r511-r1k validity cache
  */
