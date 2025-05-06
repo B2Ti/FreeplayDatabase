@@ -13,6 +13,7 @@
 #include <seedStatistics.h>
 #include <defines.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 
 int test(void){
