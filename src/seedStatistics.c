@@ -151,7 +151,7 @@ static int U32Map_DoubleSize(U32Map *map){
     }
     uint32_t *keys = calloc(newSize, sizeof(uint32_t));
     if (!keys){
-        perror("could not realloc map\n");
+        perror("could not realloc map");
         return 1;
     }
     uint32_t *values = calloc(newSize, sizeof(uint32_t));
@@ -197,9 +197,11 @@ static int U32Map_Add(U32Map *map, uint32_t key, uint32_t val){
         idx = (idx + 1) % map->mapSize;
         _key = map->keys[idx];
     }
-    if (!_key) map->keys[idx] = key;
+    if (!_key) {
+        map->keys[idx] = key;
+        map->filledBuckets++;
+    }
     map->values[idx] += val;
-    map->filledBuckets++;
     return 0;
 }
 

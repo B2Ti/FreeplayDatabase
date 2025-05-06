@@ -2,10 +2,13 @@
 .mypy_cache/
 .vs/
 .vscode/
+.clangd
+compile/
 
 # Created files
 database/
 statistics/
+obj/
 __pycache__
 *.profraw
 *.profdata

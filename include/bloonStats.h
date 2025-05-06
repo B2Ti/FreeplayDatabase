@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "defines.h"
 
-extern const double bloonCash[18][2];
-
+const char *getBloonName(int32_t bloontype);
+const char *getBloonModifiers(int32_t bloontype);
 double cashMultiplier(int32_t round);
 double getCash(int32_t bloontype, int32_t round);
