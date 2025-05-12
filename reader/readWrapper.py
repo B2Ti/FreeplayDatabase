@@ -2,6 +2,7 @@ import ctypes
 from time import perf_counter as pfc
 from typing import TypedDict
 import sys
+from glob import glob
 
 num = 1000 - 141
 
@@ -40,7 +41,11 @@ class Reader(ctypes.CDLL):
     readSeeds: "ctypes._FuncPointer"
     freeResults: "ctypes._FuncPointer"
 
-reader = Reader("./reader.dll")
+paths = glob("./*readerCDLL*.*")
+if len(paths) > 1:
+    raise RuntimeError("More than one CDLL path was found")
+
+reader = Reader(paths[0])
 reader.openFile.argtypes = [ctypes.POINTER(DatabaseFile), ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
 reader.openFile.restype = ctypes.c_int
 reader.closeFile.argtypes = [ctypes.POINTER(DatabaseFile)]
@@ -101,7 +106,7 @@ def main():
     print(f"Took {end-start}s to read {s2 - s1 + 1} seeds")
     start = pfc()
     file = DatabaseFile()
-    res = reader.openFile(ctypes.pointer(file), "database/thread-0/seeds_0-999.bin".encode(), "rb".encode(), 355538)
+    res = reader.openFile(ctypes.pointer(file), "database-results/thread-0/seeds_0-999.bin".encode(), "rb".encode(), 355538)
     if res:
         raise RuntimeError("Error opening file")
     results = read(file)
