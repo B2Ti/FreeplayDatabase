@@ -106,7 +106,7 @@ def main():
     print(f"Took {end-start}s to read {s2 - s1 + 1} seeds")
     start = pfc()
     file = DatabaseFile()
-    res = reader.openFile(ctypes.pointer(file), "database-results/thread-0/seeds_0-999.bin".encode(), "rb".encode(), 355538)
+    res = reader.openFile(ctypes.pointer(file), "database-results/thread-0/seeds_0-999999.bin".encode(), "rb".encode(), 355538)
     if res:
         raise RuntimeError("Error opening file")
     results = read(file)
