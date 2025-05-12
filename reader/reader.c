@@ -38,7 +38,7 @@ int setPath(char *path, int buffer_size, int file){
     int thread = file / FILE_NUM;
     int seeds_per_file = FRAGMENT_NUM * FRAGMENT_SIZE;
     int err = snprintf(path, buffer_size,
-        "database/thread-%d/seeds_%d-%d.bin",
+        "database-results/thread-%d/seeds_%d-%d.bin",
         thread,
         file * seeds_per_file,
         -1 + (file + 1) * seeds_per_file

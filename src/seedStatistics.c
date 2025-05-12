@@ -297,7 +297,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics/thread-%d/round-%hu_bads.txt",
+        "statistics-results/thread-%d/round-%hu_bads.txt",
         threadNum,
         round
     ) > 128 ){
@@ -313,7 +313,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics/thread-%d/round-%hu_fbads.txt",
+        "statistics-results/thread-%d/round-%hu_fbads.txt",
         threadNum,
         round
     ) > 128 ){
@@ -329,7 +329,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics/thread-%d/round-%hu_cash.bin",
+        "statistics-results/thread-%d/round-%hu_cash.bin",
         threadNum,
         round
     ) > 128 ){
@@ -383,7 +383,7 @@ crossThreadReturnValue seedStatistics(void *arg){
     }
     {
         char path[128] = {0};
-        if (snprintf(path, 128, "statistics/thread-%d", threadNum) > 128){
+        if (snprintf(path, 128, "statistics-results/thread-%d", threadNum) > 128){
             return (crossThreadReturnValue) 1;
         }
         if (ensureDirectoryExists(path)){

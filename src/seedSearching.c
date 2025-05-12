@@ -206,7 +206,7 @@ crossThreadReturnValue searchSeeds(void *arg){
     const int threadNum = args.seedStart / args.seedNum;
     char path[100];
     memset(path, 0, 100);
-    if (snprintf(path, 100, "database/thread-%d", threadNum) > 100){
+    if (snprintf(path, 100, "database-results/thread-%d", threadNum) > 100){
         fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename\n");
         return (crossThreadReturnValue) 1;
     }
@@ -224,7 +224,7 @@ crossThreadReturnValue searchSeeds(void *arg){
     while (seed < seedEnd){
         memset(path, 0, 100);
         if (snprintf(
-                path, 100, "database/thread-%d/seeds_%d-%d.bin", threadNum,
+                path, 100, "database-results/thread-%d/seeds_%d-%d.bin", threadNum,
                 seed, seed + args.fragmentsPerFile * args.seedsPerFragment - 1
             ) >= 100
         ){

@@ -1,8 +1,8 @@
 // zlib may be installed as zlib.lib or just zlib, which need -lzlib and -lz respectively
 // 1                ) clang src/*.c database.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -DRUNNINGTEST=1 -fprofile-generate
 // 2                ) ./main-10.exe
-// 3 Powershell     ) rd -r  ./database
-// 3 Linux Terminal ) rm -r ./database
+// 3 Powershell     ) rd -r  ./database-results
+// 3 Linux Terminal ) rm -r ./database-results
 // 4                ) llvm-profdata merge ./*.profraw -output="default.profdata"
 // 5                ) clang src/*.c database.c -Iinclude -Llib -lzlib -O3 -o"main-10.exe" -march=native -mfma -mavx2 -fprofile-use
 // 6                ) ./main-10.exe
@@ -32,7 +32,7 @@ int test(void){
 
 
 int main(void){
-    if (ensureDirectoryExists("database/")){
+    if (ensureDirectoryExists("database-results/")){
         fprintf(stderr, "main: could not create database directory\n");
         return 1;
     }

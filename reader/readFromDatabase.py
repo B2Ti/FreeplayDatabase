@@ -49,14 +49,14 @@ def processChunk(data: int) -> list[SeedData]:
     return all_seeds
 
 def main():
-    with open("database/thread-0/seeds_0-999.bin", 'rb') as file:
+    with open("database-results/thread-0/seeds_0-999.bin", 'rb') as file:
         chunk = readChunk(file)
         start = pfc()
         data1 = processChunk(chunk)
         end = pfc()
         print(f"took {end-start}s")
         pass
-    with open("database/thread-0/seeds_0-999.bin", 'rb') as file:
+    with open("database-results/thread-0/seeds_0-999.bin", 'rb') as file:
         chunk = readChunk(file)
         start = pfc()
         data2 = processChunk(chunk)

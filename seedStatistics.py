@@ -5,20 +5,16 @@ import sys
 import matplotlib.pyplot as plt
 
 def stats_from_freq_dict(freq_dict: dict[int|float, int]):
-    # Sort the dictionary by value to ensure correct ordering
     sorted_items = sorted(freq_dict.items())
     
     total_count = sum(freq_dict.values())
     
-    # Mean
     total_sum = sum(val * freq for val, freq in sorted_items)
     mean = total_sum / total_count
 
-    # Standard deviation
     variance = sum(freq * ((val - mean) ** 2) for val, freq in sorted_items) / total_count
     std_dev = math.sqrt(variance)
 
-    # Median
     midpoint = total_count / 2
     cumulative = 0
     median = None
@@ -26,7 +22,6 @@ def stats_from_freq_dict(freq_dict: dict[int|float, int]):
         cumulative += freq
         if cumulative >= midpoint:
             if total_count % 2 == 1:
-                # Odd count → median is the middle value
                 median = val
                 break
             else:
@@ -39,18 +34,17 @@ def stats_from_freq_dict(freq_dict: dict[int|float, int]):
 
     return mean, median, std_dev
 
-expr = "^\[\d+:\d+\] (\d+) seeds have ([.\d]+) cash on round \d+$"
+def combine_dicts(d1: dict, d2: dict) -> dict:
+    d = d1.copy()
+    for k, v in d2.items():
+        if k in d:
+            d[k] += v
+        else:
+            d[k] = v
+    return d
 
 def main():
-    #with open("statistics/thread-0_round-141_cash.txt") as f:
-    #    lines = f.read().split("\n")
-    #    data = {}
-    #    for line in lines:
-    #        if not line:
-    #            continue
-    #        frequency, value = line.split(":")
-    #        data[float(value)] = int(frequency)
-    with open("statistics/thread-0/round-141_cash.bin", "rb") as f:
+    with open("statistics-results/thread-0/round-141_cash.bin", 'rb') as f:
         data = {}
         bytes = f.read(8)
         while bytes:
@@ -58,6 +52,7 @@ def main():
             cash50 = int.from_bytes(bytes[4:], sys.byteorder)
             data[cash50/50] = count
             bytes = f.read(8)
+
     mean, median, std_dev = stats_from_freq_dict(data)
     sorted_items = sorted(data.items())
     bins, counts = list(zip(*sorted_items))

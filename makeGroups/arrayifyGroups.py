@@ -35,10 +35,13 @@ def bloon_StoI(bloon:str) -> int:
     value += all_bloons[bloon]
     return value
 
-with open("cleanedFreeplayGroups2.json", 'r') as f:
-    allGroups = json.load(f)
+ver44 = input("use version 44 groups y/[n]: ") == 'y'
 
-#arrayGroups:list[tuple[float, int, int, list[int]]] = []
+groups = "cleanedFreeplayGroups.json" if ver44 else "cleanedFreeplayGroups2.json"
+output = "arrayGroups-v44.txt" if ver44 else "arrayGroups-latest.txt"
+
+with open(groups, 'r') as f:
+    allGroups = json.load(f)
 
 class Score:
     def __repr__(self):
@@ -67,9 +70,10 @@ for group in allGroups:
     bounds_array += [-1] * (bounds_length - len(bounds_array))
     arrayGroups.append({Score():float(score), Type_():bloon, Count():count, Bounds():bounds_array})
     boundlessGroups.append({Score():float(score),Type_():bloon, Count():count})
-    #arrayGroups.append((score, bloon, count, bounds_array))
 
-with open("arrayGroups.txt", 'w') as f:
+print(f"groups length: {len(arrayGroups)}")
+
+with open(output, 'w') as f:
     f.write("const Group groups[NUM_GROUPS] = ")
     f.write(
         str(arrayGroups).replace(":", "=").replace("]}, ", "]},\n").replace("[", "{").replace("]", "}")

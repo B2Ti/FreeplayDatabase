@@ -84,7 +84,7 @@ int main(void){
     }
     uint64_t time_start = time_us();
     CompressedFile file;
-    if (CompressedFile_InitSeeds(&file, "database/thread-0/seeds_0-99999.bin", "rb", 1000-141, 100)){
+    if (CompressedFile_InitSeeds(&file, "database-results/thread-0/seeds_0-99999.bin", "rb", 1000-141, 100)){
         fprintf(stderr, "failed to open file\n");
         return 1;
     }
