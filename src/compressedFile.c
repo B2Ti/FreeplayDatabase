@@ -239,9 +239,6 @@ int CompressedFile_Flush(CompressedFile *file, int compressionLevel){
         free(compressedData);
         return FILE_FAIL;
     }
-    //for (i = 0; i < compressedLen; i++){
-    //    fwrite(&compressedData[i], 1, 1, fptr);
-    //}
 
     file->index=0;
     memset(file->buffer, 0, file->buffersize);
@@ -364,7 +361,6 @@ int CompressedFile_Write56(CompressedFile *file, uint64_t data, const uint32_t n
         data >>= 8;
         file->buffer[index + i] += data & 0xff;
     }
-    //file->buffer[index + nbytes] += extra;
     file->index += nbits;
     return 0;
 }
@@ -521,12 +517,3 @@ int CompressedFile_Read(CompressedFile *file, Byte *data, const uint32_t nbits){
     return 0;
 }
 
-/*
-int main(){
-    unsigned char d[2] = {0xaa, 0xaa};
-    printf("%hhx, %hhx\n", d[1], d[0]);
-    unsigned char extra = shiftBuffer(d, 2, 1);
-    printf("%hhx, %hhx, %hhx\n", extra, d[1], d[0]);
-    return 0;
-}
-*/

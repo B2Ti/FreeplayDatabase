@@ -31,10 +31,15 @@ int test(void){
     return 0;
 }
 
-int main(void){
+int main(int argc, char *argv[]){
     if (ensureDirectoryExists("statistics-results/")){
         fprintf(stderr, "main: could not create database directory\n");
         return 1;
+    }
+    if (argc > 1){
+        if (argv[1][0] == 't'){
+            return test();
+        }
     }
     seedSearchArg *args[NUM_THREADS];
     crossThread threads[NUM_THREADS];

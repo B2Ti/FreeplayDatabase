@@ -1,7 +1,8 @@
 #include <freeplayGroups.h>
 
-const Group groups[NUM_GROUPS];
-const BoundlessGroup boundlessGroups[NUM_GROUPS];
+//forward declare groups for readability
+extern const Group groups[NUM_GROUPS];
+extern const BoundlessGroup boundlessGroups[NUM_GROUPS];
 
 const Group *getGroupPtr(const size_t index){
     return &groups[index];

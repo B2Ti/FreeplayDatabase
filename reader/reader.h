@@ -1,4 +1,7 @@
 #pragma once
+
+#include <compressedFile.h>
+
 typedef struct Results {
     uint32_t seed;
     Byte fbads[1000-141];

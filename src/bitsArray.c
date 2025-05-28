@@ -82,19 +82,3 @@ bool *makeBoolGroupsArray(size_t maximumRound){
     return bools;
 }
 
-
-/*
-#include <stdio.h>
-int main(){
-    Byte *bits = makeGroupsArray(1000);
-    if (bits == NULL){
-        return 0;
-    }
-    FILE *file;
-    file = fopen("bitarray.bin", "wb");
-    size_t n_bits = numGroups * 1000;
-    size_t bytes = (n_bits / 8) + ((n_bits & 0x7) > 0);
-    fwrite(bits, 1, bytes, file);
-    fclose(file);
-}
-*/

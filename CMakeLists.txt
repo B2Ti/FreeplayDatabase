@@ -36,9 +36,9 @@ else()
     target_link_libraries(SOURCE ZLIB::ZLIB)
 endif()
 
-add_executable(database "database.c")
-add_executable(printing "printing.c")
-add_executable(statistics "statistics.c")
+add_executable(database "database/main.c")
+add_executable(printing "printing/main.c")
+add_executable(statistics "statistics/main.c")
 
 target_link_libraries(printing PUBLIC SOURCE)
 target_link_libraries(database PUBLIC SOURCE)
