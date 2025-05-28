@@ -21,7 +21,14 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 endif()
 
+if (CMAKE_C_COMPILER_ID MATCHES "MSVC")
+    add_compile_options("/experimental:c11atomics")
+endif()
+
 find_package(ZLIB REQUIRED)
+
+# write the zlib path to a file so the reader script can link with it later
+file(WRITE "${CMAKE_BINARY_DIR}/zlib_path.txt" "${ZLIB_LIBRARY}")
 
 file(GLOB SOURCE_FILES "src/*.c")
 
@@ -50,6 +57,35 @@ if (WIN32)
     set_target_properties(readerCDLL PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-target_link_libraries(readerCDLL SOURCE)
+set_target_properties(readerCDLL PROPERTIES
+    PREFIX ""
+    SUFFIX ".dll"
+    OUTPUT_NAME "reader"
+)
 
-configure_file("reader/readWrapper.py" "readWrapper.py" COPYONLY)
+target_link_libraries(readerCDLL PRIVATE SOURCE)
+
+set(READER_SRC "${CMAKE_SOURCE_DIR}/reader/readWrapper.py")
+set(READER_DST "$<TARGET_FILE_DIR:readerCDLL>/readWrapper.py")
+set(STATISTICS_SRC "${CMAKE_SOURCE_DIR}/reader/seedStatistics.py")
+set(STATISTICS_DST "$<TARGET_FILE_DIR:readerCDLL>/seedStatistics.py")
+set(ZLIB_PATH_LOCATION "${CMAKE_BINARY_DIR}/zlib_path.txt")
+set(ZLIB_PATH_OUTPUT "$<TARGET_FILE_DIR:readerCDLL>/zlib_path.txt")
+
+add_custom_command(
+    TARGET database POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${READER_SRC} ${READER_DST}
+    COMMENT "Copying readWrapper.py to runtime directory"
+)
+
+add_custom_command(
+    TARGET statistics POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${STATISTICS_SRC} ${STATISTICS_DST}
+    COMMENT "Copying readWrapper.py to runtime directory"
+)
+
+add_custom_command(
+    TARGET readerCDLL POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB_PATH_LOCATION} ${ZLIB_PATH_OUTPUT}
+    COMMENT "Copying readWrapper.py to runtime directory"
+)

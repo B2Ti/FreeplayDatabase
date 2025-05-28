@@ -1,8 +1,14 @@
 import ctypes
+import os
 from time import perf_counter as pfc
 from typing import TypedDict
 import sys
 from glob import glob
+
+with open("zlib_path.txt") as f:
+    zlib_lib = os.path.dirname(f.read().strip())
+    zlib_bin = os.path.join(os.path.dirname(zlib_lib), "bin")
+    os.add_dll_directory(zlib_bin)
 
 num = 1000 - 141
 
@@ -41,11 +47,11 @@ class Reader(ctypes.CDLL):
     readSeeds: "ctypes._FuncPointer"
     freeResults: "ctypes._FuncPointer"
 
-paths = glob("./*readerCDLL*.*")
-if len(paths) > 1:
-    raise RuntimeError("More than one CDLL path was found")
+reader_path = os.path.abspath("./reader.dll")
+if not os.path.exists(reader_path):
+    raise RuntimeError("reader.dll could not be found")
 
-reader = Reader(paths[0])
+reader = Reader(reader_path)
 reader.openFile.argtypes = [ctypes.POINTER(DatabaseFile), ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
 reader.openFile.restype = ctypes.c_int
 reader.closeFile.argtypes = [ctypes.POINTER(DatabaseFile)]
