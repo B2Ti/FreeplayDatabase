@@ -20,7 +20,7 @@ int test(void){
     args = makearg(0, FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE,
                    FRAGMENT_SIZE, FRAGMENT_NUM, 
                    BEGIN_ROUND, END_ROUND,
-                   PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE);
+                   PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE, false);
     if (args == NULL){
         perror("failed to allocate argument: ");
         return 1;
@@ -32,13 +32,17 @@ int test(void){
 
 
 int main(int argc, char *argv[]){
-    if (ensureDirectoryExists("database-results/")){
+    if (ensureDirectoryExists(DATABASE_DIR)){
         fprintf(stderr, "main: could not create database directory\n");
         return 1;
     }
+    bool ver44 = false;
     if (argc > 1){
         if (argv[1][0] == 't'){
             return test();
+        }
+        if (strcmp(argv[1], "v44")){
+            ver44 = true;
         }
     }
     seedSearchArg *args[NUM_THREADS];
@@ -49,7 +53,7 @@ int main(int argc, char *argv[]){
                           FILE_NUM * FRAGMENT_NUM * FRAGMENT_SIZE,
                           FRAGMENT_SIZE, FRAGMENT_NUM,
                           BEGIN_ROUND, END_ROUND,
-                          PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE);
+                          PROGRESS_BAR_TYPE, PROGRESS_BAR_VALUE, ver44);
         if (!args[i]){
             perror("\nfailed to allocate argument: \n");
             return 1;

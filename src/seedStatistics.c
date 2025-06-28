@@ -238,9 +238,9 @@ typedef struct RoundResult {
     U32Map cash;
 } RoundResult;
 
-static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, const Byte *groupsArray, ShuffleCache *cache, RoundResult *res){
+static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, bool ver44, const Byte *groupsArray, ShuffleCache *cache, RoundResult *res){
     for (uint16_t round_ = roundStart; round_ < roundEnd; round_++){
-        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round_, groupsArray);
+        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round_, ver44, groupsArray);
         double cash = 0;
         float budget = (round_ * 4000 - 225000) * groupIdxs->budget_mult;
         const uint32_t offset = ((uint32_t) round_) * NUM_GROUPS;
@@ -297,7 +297,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics-results/thread-%d/round-%hu_bads.txt",
+        STATISTICS_THREAD_DIR "round-%hu_bads.txt",
         threadNum,
         round
     ) > 128 ){
@@ -313,7 +313,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics-results/thread-%d/round-%hu_fbads.txt",
+        STATISTICS_THREAD_DIR "round-%hu_fbads.txt",
         threadNum,
         round
     ) > 128 ){
@@ -329,7 +329,7 @@ int output(int threadNum, uint16_t round, uint16_t roundStart, const RoundResult
     if (snprintf(
         fname,
         128,
-        "statistics-results/thread-%d/round-%hu_cash.bin",
+        STATISTICS_THREAD_DIR "round-%hu_cash.bin",
         threadNum,
         round
     ) > 128 ){
@@ -363,7 +363,7 @@ crossThreadReturnValue seedStatistics(void *arg){
         return (crossThreadReturnValue)1;
     }
     ShuffleCache cache;
-    if (initCache(&cache, args.roundEnd - args.roundStart + 1, groups)){
+    if (initCache(&cache, args.roundEnd - args.roundStart + 1, args.ver44, groups)){
         return (crossThreadReturnValue)1;
     }
     RoundResult *r = calloc(args.roundEnd - args.roundStart + 1, sizeof(RoundResult));
@@ -383,7 +383,7 @@ crossThreadReturnValue seedStatistics(void *arg){
     }
     {
         char path[128] = {0};
-        if (snprintf(path, 128, "statistics-results/thread-%d", threadNum) > 128){
+        if (snprintf(path, 128, STATISTICS_THREAD_DIR, threadNum) > 128){
             return (crossThreadReturnValue) 1;
         }
         if (ensureDirectoryExists(path)){
@@ -392,7 +392,7 @@ crossThreadReturnValue seedStatistics(void *arg){
     }
     for (uint32_t seed = args.seedStart; seed < args.seedStart + args.seedNum; seed++){
         if (searchSingleSeed(
-            seed, args.roundStart, args.roundEnd, groups, &cache, r
+            seed, args.roundStart, args.roundEnd, args.ver44, groups, &cache, r
         )){
             return (crossThreadReturnValue)1;
         }

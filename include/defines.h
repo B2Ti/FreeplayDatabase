@@ -1,4 +1,12 @@
 #pragma once
+
+#define DATABASE_DIR "database-results/"
+#define DATABASE_THREAD_DIR DATABASE_DIR "thread-%d/"
+
+#define STATISTICS_DIR "statistics-results/"
+#define STATISTICS_THREAD_DIR STATISTICS_DIR "thread-%d/"
+
+
 #define NULL_PTR_FAIL -1
 #define MALLOC_FAIL 1
 #define FILE_FAIL 2

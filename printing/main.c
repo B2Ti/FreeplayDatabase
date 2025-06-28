@@ -13,16 +13,17 @@ typedef enum helpCodes {
 } helpCodes;
 
 void printHelp(helpCodes code){
-    printf("%s\n", "usage: printing [-h] seed start end");
+    printf("%s\n", "usage: printing [-h] seed start end [ver44]");
     if (code & error){
         printf("%s\n", "error: the following arguments are required: seed, start, end");
     }
     if (code & extended){
-        printf("\n%s\n%s\n%s\n%s\n\n%s\n%s\n",
+        printf("\n%s\n%s\n%s\n%s\n%s\n\n%s\n%s\n",
             "positional arguments:",
             "  seed - which seed to print from",
             "  start - which round to start printing from (inclusive)",
             "  end - which round to stop printing on (exclusive)",
+            "  ver44 - whether or not to use version 44 budget/shuffle",
             "options:",
             "  -h, -?, --help - show this help message and exit"
         );
@@ -41,7 +42,7 @@ int main(int argc, char *argv[]){
             return 0;
         }
     }
-    if (argc != 4){
+    if (argc < 4){
         printHelp(error);
         return 1;
     }
@@ -73,5 +74,12 @@ int main(int argc, char *argv[]){
         printf("error: end argument provided is larger than u16 max\n");
         return 1;
     }
-    return printSeed(seed, start, end);
+    bool ver44 = false;
+    if (argc >= 5){
+        ver44 |= strcmp(argv[4], "true") == 0;
+        ver44 |= strcmp(argv[4], "t") == 0;
+        ver44 |= strcmp(argv[4], "y") == 0;
+        ver44 |= strcmp(argv[4], "1") == 0;
+    }
+    return printSeed(seed, start, ver44, end);
 }

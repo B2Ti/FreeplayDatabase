@@ -49,8 +49,8 @@ static void setEntryValidity(ShuffleCacheEntry *entry, const Byte *validityArray
     }
 }
 
-#ifdef VER_44
-static void shuffleSeeded16(uint16_t array[], const size_t _len, SeededRandom *rand){
+
+static void shuffleSeeded16V44(uint16_t array[], const size_t _len, SeededRandom *rand){
     const size_t len = _len - 1;
     int32_t i = len;
     while (true){
@@ -66,20 +66,20 @@ static void shuffleSeeded16(uint16_t array[], const size_t _len, SeededRandom *r
     }
 }
 
-static void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
+static void setEntrySeedV44(ShuffleCacheEntry *entry, const uint32_t seed, const Byte *validityArray){
     for (uint16_t i = 0; i < NUM_GROUPS; i++){
         entry->array[i] = i;
     }
     entry->seed = seed;
     SeededRandom rand = {seed};
-    shuffleSeeded16(entry->array, NUM_GROUPS, &rand);
+    shuffleSeeded16V44(entry->array, NUM_GROUPS, &rand);
     if (validityArray){
         setEntryValidity(entry, validityArray);
     }
     rand.seed = seed;
     entry->budget_mult = 1.5 - getNextSeed(&rand);
 }
-#else
+
 static void shuffleInPlace16(uint16_t array[], const size_t len, SeededRandom *rand){
     for (size_t i = 0; i < len; i++){
         int64_t index = getNextSeedBounded(rand, i, len);
@@ -101,15 +101,18 @@ static void setEntrySeed(ShuffleCacheEntry *entry, const uint32_t seed, const By
     }
     entry->budget_mult = 1.5 - getNextSeed(&rand);
 }
-#endif
 
-int initCache(ShuffleCache *cache, const size_t cacheSize, const Byte *validityArray){
+int initCache(ShuffleCache *cache, const size_t cacheSize, bool ver44, const Byte *validityArray){
     cache->cache = malloc(cacheSize * sizeof(ShuffleCacheEntry));
     if (!cache->cache){
         return -1;
     }
     for (size_t i = 0; i < cacheSize; i++){
-        setEntrySeed(&cache->cache[i], i, validityArray);
+        if (ver44) {
+            setEntrySeed(&cache->cache[i], i, validityArray);
+        } else {
+            setEntrySeedV44(&cache->cache[i], i, validityArray);
+        }
     }
     cache->size=cacheSize;
     return 0;
@@ -121,10 +124,14 @@ void freeCache(ShuffleCache *cache){
     cache->size = 0;
 }
 
-ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, const Byte *validityEntry){
+ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, bool ver44, const Byte *validityEntry){
     const uint32_t index = seed % cache->size;
     if ((uint32_t)cache->cache[index].seed != seed){
-        setEntrySeed(&cache->cache[index], seed, validityEntry);
+        if (ver44) {
+            setEntrySeed(&cache->cache[index], seed, validityEntry);
+        } else {
+            setEntrySeedV44(&cache->cache[index], seed, validityEntry);
+        }
     }
     return &cache->cache[index];
 }

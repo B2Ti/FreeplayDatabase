@@ -1,6 +1,7 @@
 //cc reader\reader.c src\compressedFile.c src\timing.c -I include -L lib -lzlib -O3 -shared -o"reader.dll"
 
 #include <compressedFile.h>
+#include <seedSearching.h>
 #include <defines.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,7 +39,7 @@ int setPath(char *path, int buffer_size, int file){
     int thread = file / FILE_NUM;
     int seeds_per_file = FRAGMENT_NUM * FRAGMENT_SIZE;
     int err = snprintf(path, buffer_size,
-        "database-results/thread-%d/seeds_%d-%d.bin",
+        DATABASE_THREAD_DIR "seeds_%d-%d.bin",
         thread,
         file * seeds_per_file,
         -1 + (file + 1) * seeds_per_file

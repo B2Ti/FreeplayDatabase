@@ -12,15 +12,11 @@
 #include <zlib.h>
 #include <stdatomic.h>
 
-#if defined _DEBUG
-typedef unsigned long long size_t; //fixes intellisense that is broken by stdatomic.h, otherwise it thinks that size_t is a function ptr type
-typedef atomic_bool; //also an intellisense (or me) skill issue
-#endif
-
 seedSearchArg *makearg(uint32_t seedStart, uint32_t seedNum,
                        uint32_t seedsPerFragment, uint32_t fragmentsPerFile,
                        uint16_t roundStart, uint16_t roundEnd,
-                       uint32_t progBarType, uint32_t progBarValue){
+                       uint32_t progBarType, uint32_t progBarValue,
+                       bool ver44){
     seedSearchArg *arg = malloc(sizeof(seedSearchArg));
     if (!arg) {
         return arg;
@@ -33,6 +29,7 @@ seedSearchArg *makearg(uint32_t seedStart, uint32_t seedNum,
     arg->seedNum = seedNum;
     arg->progBar.type = progBarType;
     arg->progBar.value = progBarValue;
+    arg->ver44 = ver44;
     return arg;
 }
 
@@ -69,31 +66,16 @@ static uint32_t displayCommandLineInfo(uint32_t seed, double lastTime, double ti
     return nextChar;
 }
 
-#ifndef USE_BOOL_ARRAY
- #define arrayType Byte
- #define getFunc bitget
- #define makeFunc makeGroupsArray
-#else 
- #define arrayType bool
- #define getFunc boolget
- #define makeFunc makeBoolGroupsArray
-#endif
-
-static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, CompressedFile *file, ShuffleCache *cache, const arrayType *groupsArray){
+static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, const uint16_t roundEnd, bool ver44, CompressedFile *file, ShuffleCache *cache, const Byte *groupsArray){
     if (CompressedFile_Write56(file, seed, 32)){
         return 1;
     }
     for (uint16_t round = roundStart; round < roundEnd; round++){
-        #ifndef USE_BOOL_ARRAY
-        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round, groupsArray);
-        #else
-        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed +round, NULL);
-        #endif
+        const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round, ver44, groupsArray);
         double cash = 0;
         float budget = (round * 4000 - 225000) * groupIdxs->budget_mult;
         const uint32_t offset = ((uint32_t) round) * NUM_GROUPS;
         uint16_t nfbads = 0, nbads = 0;
-        #ifndef USE_BOOL_ARRAY
         if (round >= 511){
             for (uint16_t i = 0; i < MAX_COUNT; i++){
                 if (groupIdxs->r511Groups[i] == R511END){
@@ -134,28 +116,6 @@ static int searchSingleSeed(const uint32_t seed, const uint16_t roundStart, cons
                 }
             }
         }
-        #else
-        for (uint16_t i = 0; i < NUM_GROUPS; i++){
-            if (!boolget(
-                groupsArray,
-                offset + groupIdxs->array[i]
-            )){
-                continue;
-            }
-            const BoundlessGroup group = getBoundlessGroup(groupIdxs->array[i]);
-            if (group.score > budget){
-                continue;
-            }
-            budget -= group.score;
-            cash += getCash(group.type, round) * (double)group.count;
-            if (group.type == FBAD_TYPE){
-                nfbads+=group.count;
-            }
-            if (group.type == BAD_TYPE){
-                nbads+=group.count;
-            }
-        }
-        #endif
         if (CompressedFile_Write56(file, nfbads, 6)) {
             return 1;
         }
@@ -175,20 +135,12 @@ crossThreadReturnValue searchSeeds(void *arg){
     seedSearchArg args = *(seedSearchArg*)arg;
     ShuffleCache cache;
     CompressedFile file;
-    arrayType *groups = makeFunc(args.roundEnd);
+    Byte *groups = makeGroupsArray(args.roundEnd);
     if (!groups){
         perror("malloc failed: ");
         return (crossThreadReturnValue) 1;
     }
-    if (initCache(
-        &cache,
-        args.roundEnd,
-        #ifndef USE_BOOL_ARRAY
-        groups
-        #else
-        NULL
-        #endif
-    )){
+    if (initCache(&cache, args.roundEnd, args.ver44, groups)){
         perror("malloc failed: ");
         return (crossThreadReturnValue) 1;
     }
@@ -206,7 +158,7 @@ crossThreadReturnValue searchSeeds(void *arg){
     const int threadNum = args.seedStart / args.seedNum;
     char path[100];
     memset(path, 0, 100);
-    if (snprintf(path, 100, "database-results/thread-%d", threadNum) > 100){
+    if (snprintf(path, 100, DATABASE_THREAD_DIR, threadNum) > 100){
         fprintf(stderr, "searchSeeds did not have a large enough buffer to store the filename\n");
         return (crossThreadReturnValue) 1;
     }
@@ -224,7 +176,7 @@ crossThreadReturnValue searchSeeds(void *arg){
     while (seed < seedEnd){
         memset(path, 0, 100);
         if (snprintf(
-                path, 100, "database-results/thread-%d/seeds_%d-%d.bin", threadNum,
+                path, 100, DATABASE_THREAD_DIR "seeds_%d-%d.bin", threadNum,
                 seed, seed + args.fragmentsPerFile * args.seedsPerFragment - 1
             ) >= 100
         ){
@@ -237,7 +189,7 @@ crossThreadReturnValue searchSeeds(void *arg){
         }
         for (uint32_t i = 0; i < args.fragmentsPerFile; i++){
             for (uint32_t j = 0; j < args.seedsPerFragment; j++){
-                if (searchSingleSeed(seed, args.roundStart, args.roundEnd, &file, &cache, groups)){
+                if (searchSingleSeed(seed, args.roundStart, args.roundEnd, args.ver44, &file, &cache, groups)){
                     return (crossThreadReturnValue) 1;
                 }
                 seed++;

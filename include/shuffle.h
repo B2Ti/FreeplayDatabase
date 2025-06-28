@@ -27,9 +27,10 @@ int64_t getNextSeedBounded(SeededRandom *rand, int64_t min, int64_t max);
 /**
  * @param validityArray optional, creates the r511-r1k validity cache
  */
-int initCache(ShuffleCache *cache, const size_t cacheSize, const Byte *validityArray);
+int initCache(ShuffleCache *cache, const size_t cacheSize, bool ver44, const Byte *validityArray);
 void freeCache(ShuffleCache *cache);
 /**
  * @param validityArray optional, creates/accesses the r511-r1k validity cache for the given seed
  */
-ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, const Byte *validityArray);
+ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, bool ver44, const Byte *validityEntry);
+

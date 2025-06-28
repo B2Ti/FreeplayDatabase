@@ -8,8 +8,8 @@
 #include <bitsArray.h>
 #include <bloonStats.h>
 
-static int printSingleRound(const uint32_t seed, const uint16_t round, ShuffleCache *cache, const Byte *groupsArray){
-    const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round, NULL);
+static int printSingleRound(const uint32_t seed, const uint16_t round, bool ver44, ShuffleCache *cache, const Byte *groupsArray){
+    const ShuffleCacheEntry *groupIdxs = requestFromCache(cache, seed + round, ver44, NULL);
     double cash = 0.0;
     uint16_t nbads = 0, nfbads = 0;
     float budget = (4000 * round - 225000) * groupIdxs->budget_mult;
@@ -58,18 +58,20 @@ static int printSingleRound(const uint32_t seed, const uint16_t round, ShuffleCa
     return 0;
 }
 
-int printSeed(uint32_t seed, uint16_t roundStart, int16_t roundEnd){
+int printSeed(uint32_t seed, uint16_t roundStart, bool ver44, int16_t roundEnd){
     ShuffleCache cache;
+    /*print including the end round*/
+    roundEnd++;
     Byte *groups = makeGroupsArray(roundEnd);
     if (!groups){
         return 1;
     }
-    if (initCache(&cache, roundEnd, NULL)){
+    if (initCache(&cache, roundEnd, ver44, NULL)){
         free(groups);
         return 1;
     }
     for (uint16_t round = roundStart; round < roundEnd; round++){
-        if (printSingleRound(seed, round, &cache, groups)){
+        if (printSingleRound(seed, round, ver44, &cache, groups)){
             return 1;
         }
     }
