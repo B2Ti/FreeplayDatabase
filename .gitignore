@@ -14,6 +14,10 @@ __pycache__
 *.profraw
 *.profdata
 *.bin
+*.s
+
+# Dev. Testing files
+test.c
 
 # Object files
 *.o

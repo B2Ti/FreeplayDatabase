@@ -376,7 +376,7 @@ void _writeToBufferNoShift(CompressedFile *file, const Byte *data, const uint32_
 }
 
 int CompressedFile_Write(CompressedFile *file, const Byte *data, const uint32_t nbits){
-    if (!file){
+    if ((!file) || (!data)){
         fprintf(stderr, "CompressedFile_Write: recived NULL pointer\n");
         return NULL_PTR_FAIL;
     }
@@ -442,7 +442,7 @@ int CompressedFile_ShiftBufferIndex(CompressedFile *file, const int32_t shift){
 }
 
 int CompressedFile_Read56(CompressedFile *file, uint64_t *data, const uint32_t nbits){
-    if (!file){
+    if ((!file) || (!data)){
         fprintf(stderr, "CompressedFile_Read56: recived NULL pointer\n");
         return NULL_PTR_FAIL;
     }
@@ -480,7 +480,7 @@ void _readFromBufferNoShift(CompressedFile *file, Byte *data, const uint32_t nbi
 }
 
 int CompressedFile_Read(CompressedFile *file, Byte *data, const uint32_t nbits){
-    if (!file){
+    if ((!file) || (!data)){
         fprintf(stderr, "CompressedFile_Read: recived NULL pointer\n");
         return NULL_PTR_FAIL;
     }

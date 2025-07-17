@@ -128,9 +128,9 @@ ShuffleCacheEntry *requestFromCache(ShuffleCache *cache, const uint32_t seed, bo
     const uint32_t index = seed % cache->size;
     if ((uint32_t)cache->cache[index].seed != seed){
         if (ver44) {
-            setEntrySeed(&cache->cache[index], seed, validityEntry);
-        } else {
             setEntrySeedV44(&cache->cache[index], seed, validityEntry);
+        } else {
+            setEntrySeed(&cache->cache[index], seed, validityEntry);
         }
     }
     return &cache->cache[index];

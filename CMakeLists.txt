@@ -34,6 +34,8 @@ file(GLOB SOURCE_FILES "src/*.c")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
+include_directories("${ZLIB_INCLUDE_DIR}")
+
 add_library(SOURCE OBJECT ${SOURCE_FILES})
 
 find_library(MATH_LIBRARY m)
@@ -53,6 +55,7 @@ target_link_libraries(statistics PUBLIC SOURCE)
 
 add_library(readerCDLL SHARED "reader/reader.c")
 
+
 if (WIN32)
     set_target_properties(readerCDLL PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
@@ -64,6 +67,10 @@ set_target_properties(readerCDLL PROPERTIES
 )
 
 target_link_libraries(readerCDLL PRIVATE SOURCE)
+
+add_executable(test_reader "reader/readFromDatabase.c")
+target_link_libraries(test_reader PUBLIC SOURCE)
+target_link_libraries(test_reader PUBLIC readerCDLL)
 
 set(READER_SRC "${CMAKE_SOURCE_DIR}/reader/readWrapper.py")
 set(READER_DST "$<TARGET_FILE_DIR:readerCDLL>/readWrapper.py")

@@ -81,5 +81,5 @@ int main(int argc, char *argv[]){
         ver44 |= strcmp(argv[4], "y") == 0;
         ver44 |= strcmp(argv[4], "1") == 0;
     }
-    return printSeed(seed, start, ver44, end);
+    return printSeed(seed, start, end, ver44);
 }

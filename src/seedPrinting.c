@@ -58,7 +58,7 @@ static int printSingleRound(const uint32_t seed, const uint16_t round, bool ver4
     return 0;
 }
 
-int printSeed(uint32_t seed, uint16_t roundStart, bool ver44, int16_t roundEnd){
+int printSeed(uint32_t seed, uint16_t roundStart, int16_t roundEnd, bool ver44){
     ShuffleCache cache;
     /*print including the end round*/
     roundEnd++;
