@@ -292,6 +292,7 @@ int CompressedFile_LoadNextBuffer(CompressedFile *file){
 
     if (fread(buffer, 1, size, fptr) != size){
         fprintf(stderr, "CompressedFile_LoadNextBuffer: Unable to read data\n");
+        free(buffer);
         return FILE_FAIL;
     }
     
@@ -310,12 +311,16 @@ int CompressedFile_LoadNextBuffer(CompressedFile *file){
         if (inflateEnd(&stream)){
             fprintf(stderr, "CompressedFile_Flush: inflateEnd returned an error when cleaning up failed compression\n");
         }
+        free(buffer);
         return MISC_FAIL;
     }
     if (inflateEnd(&stream)){
         fprintf(stderr, "CompressedFile_Flush: inflateEnd returned an error\n");
+        free(buffer);
+        return MISC_FAIL;
     }
     file->index = 0;
+    free(buffer);
 
     return 0;
 }

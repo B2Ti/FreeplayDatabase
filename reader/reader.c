@@ -126,6 +126,7 @@ int readFromFileNum(uint32_t filenum, Results *results, uint32_t low, uint32_t h
         }
         rem_seeds--;
     }
+    CompressedFile_Free(&file);
     return 0;
 }
 
